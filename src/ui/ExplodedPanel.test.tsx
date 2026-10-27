@@ -52,3 +52,13 @@ describe('ExplodedPanel', () => {
     expect(screen.queryByRole('button', { name: 'Apply all' })).toBeNull();
   });
 });
+
+
+test('inspection switches assembly mode and shows equipment dimensions', () => {
+  setup();
+  expect(screen.getByText(/700 mm × 250 mm × 500 mm/)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Assembled' }));
+  expect(useStore.getState().inspectionExploded).toBe(false);
+  fireEvent.click(screen.getByRole('button', { name: 'Exploded' }));
+  expect(useStore.getState().inspectionExploded).toBe(true);
+});

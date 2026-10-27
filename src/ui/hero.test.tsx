@@ -56,3 +56,12 @@ test('a blocked knob shows the stability explanation', () => {
   expect(screen.queryByRole('alert')).not.toBeNull();
   expect(screen.getByRole('alert').textContent).toMatch(/hydrodynamic stability/);
 });
+
+
+test('slow playback speeds are selectable', () => {
+  render(<App />);
+  for (const speed of [2, 5]) {
+    fireEvent.change(screen.getByLabelText('Speed'), { target: { value: String(speed) } });
+    expect(useStore.getState().speed).toBe(speed);
+  }
+});

@@ -1,3 +1,4 @@
+import { partEnvelope } from '../model/nodeDesign';
 import { useStore } from '../state/store';
 
 /** Tooltip card for whatever the pointer is over: a node, or one of its parts. */
@@ -15,6 +16,7 @@ export function HoverCard() {
         <>
           <b>{part.name}</b>
           <div className="dim">{part.subsystem} · {part.massKg} kg · {part.powerW} W</div>
+          <div className="dim small">{partEnvelope(designs[role], part).map(v => `${Math.round(v * 1000)} mm`).join(" × ")} · EST</div>
           <div>{part.rationale}</div>
         </>
       ) : (

@@ -1,3 +1,4 @@
+import { NOMINAL_DECK_Y } from './nodeDesign';
 import { G, RHO_AIR, RHO_SEA } from './constants';
 import type { NodeDesign, Part } from './parts';
 
@@ -31,11 +32,15 @@ const isPetal = (p: Part) => p.id.startsWith('petal-');
 
 /** Part position for the given petal state; deployed petals swing out and tilt up. */
 export function partPosition(d: NodeDesign, p: Part, state: PetalState): [number, number, number] {
-  if (!isPetal(p) || state === 'stowed') return p.pos;
+  if (!isPetal(p)) return p.pos;
+  if (state === 'stowed') {
+    const layer = d.parts.filter(isPetal).findIndex(part => part.id === p.id);
+    return [p.pos[0], p.pos[1] + d.keelDepthM + d.hullDepthM - NOMINAL_DECK_Y + layer * 0.055, p.pos[2]];
+  }
   const [x, y, z] = p.pos;
   const r = Math.hypot(x, z) || 1;
-  const reach = d.hullSideM / 2 + d.petalLengthM / 2;
-  return [(x / r) * reach, y + (d.petalLengthM / 2) * Math.sin(PETAL_TILT_RAD), (z / r) * reach];
+  const reach = d.hullSideM / 2 + (d.petalLengthM / 2) * Math.cos(PETAL_TILT_RAD);
+  return [(x / r) * reach, d.keelDepthM + d.hullDepthM + y - NOMINAL_DECK_Y + (d.petalLengthM / 2) * Math.sin(PETAL_TILT_RAD), (z / r) * reach];
 }
 
 function failed(d: NodeDesign): HydroResult {

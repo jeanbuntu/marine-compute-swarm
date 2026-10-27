@@ -1,7 +1,7 @@
 import { useStore } from '../state/store';
 import { clock } from './format';
 
-const SPEEDS = [60, 120, 600, 1800];
+const SPEEDS = [1, 2, 5, 60, 120, 600, 1800];
 
 export function HeroPanel() {
   const timeS = useStore((s) => s.timeS);
@@ -21,6 +21,7 @@ export function HeroPanel() {
         <b>{clock(timeS)}</b>
         <button onClick={() => setDrawer(!drawerOpen)} aria-expanded={drawerOpen}>Controls</button>
       </div>
+      <div className="dim small">Drag to orbit · Shift + drag to pan · Scroll to zoom</div>
     </header>
   );
 }

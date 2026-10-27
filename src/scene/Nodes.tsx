@@ -1,6 +1,8 @@
 import { useMemo, useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Group, Sprite, Vector3 } from 'three';
+import { Line } from '@react-three/drei';
+import { partPosition } from '../model/hydrostatics';
 import { useStore } from '../state/store';
 import { sim } from '../state/sim';
 import { evaluate } from '../model/hydrostatics';
@@ -31,6 +33,8 @@ function SwarmNode({ index }: { index: number }) {
   const design = useStore((s) => s.designs[role]);
   const hovered = useStore((s) => s.hoveredId);
   const exploded = useStore((s) => s.explodedNodeId === id);
+  const inspectionExploded = useStore((s) => s.inspectionExploded);
+  const separated = exploded && inspectionExploded;
   const selected = useStore((s) => s.selectedNodeId === id);
   const selectedPart = useStore((s) => s.selectedPartId);
   const { hover, explode, selectPart } = useStore.getState();
@@ -39,7 +43,7 @@ function SwarmNode({ index }: { index: number }) {
   const marker = useRef<Sprite>(null);
   const { camera } = useThree();
   const draft = useMemo(() => evaluate(design, 'deployed').draftM, [design]);
-  const offsets = useMemo(() => (exploded ? explodeOffsets(design.parts, EXPLODE_FACTOR) : {}), [exploded, design]);
+  const offsets = useMemo(() => (separated ? explodeOffsets(design.parts, EXPLODE_FACTOR) : {}), [separated, design]);
 
   const hoverPart = hovered?.startsWith(`${id}/`) ? hovered.slice(id.length + 1) : null;
   const hoverNode = hovered === id || hoverPart !== null;
@@ -62,14 +66,25 @@ function SwarmNode({ index }: { index: number }) {
   return (
     <group ref={root} name={id}>
       {(near || exploded) && (
-      <group position={[0, exploded ? EXPLODED_LIFT_M : -draft, 0]}>
+      <group position={[0, separated ? EXPLODED_LIFT_M : -draft, 0]}>
+        {separated && selectedPart && (() => {
+          const p = design.parts.find(p => p.id === selectedPart);
+          if (!p) return null;
+          const start = partPosition(design, p, 'deployed');
+          const end = start.map((v, i) => v + (offsets[p.id]?.[i] ?? 0)) as [number, number, number];
+          return <Line points={[start, end]} color="#d6e7e8" lineWidth={1} dashed dashSize={0.08} gapSize={0.05} transparent opacity={0.65} />;
+        })()}
+        {exploded && <group position={[0, separated ? -0.6 : draft + 0.04, 2.5]}>
+          <Line points={[[-0.5, 0, 0], [0.5, 0, 0]]} color="#edf5ed" lineWidth={2} />
+          {[-0.5, 0, 0.5].map(x => <Line key={x} points={[[x, 0, -0.06], [x, 0, 0.06]]} color="#edf5ed" lineWidth={2} />)}
+        </group>}
         <NodeModel
           design={design}
           petals={sim.sky.sun(sim.timeS).ghiWm2 > 0 ? 'deployed' : 'stowed'}
           offsets={offsets}
           highlightId={exploded ? (hoverPart ?? selectedPart) : petalHover ? hoverPart : null}
           hotAll={hoverNode && !petalHover && !exploded}
-          ghostShell={exploded}
+          ghostShell={separated}
           onPartOver={(p) => hover(p ? `${id}/${p}` : null)}
           onPartClick={(p) => (exploded ? selectPart(p) : explode(id))}
         />

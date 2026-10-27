@@ -70,7 +70,7 @@ Three layers, dependencies pointing downward only.
 
 Everything in the 15-task V1 plan (`docs/plans/2026-10-26-solar-swarm-v1.md`) is implemented. Design doc: `docs/design/2026-10-26-solar-swarm-v1-design.md`.
 
-Status at last check: `tsc` clean, 23 test files / 113 tests passing, production build succeeds.
+Status at last check: `tsc` clean, 24 test files / 123 tests passing, production build succeeds.
 
 Verified in headless Chrome (software GL) by screenshots and real mouse events:
 - Ocean, clouds and cloud shadows render.
@@ -80,7 +80,7 @@ Verified in headless Chrome (software GL) by screenshots and real mouse events:
 - Node sky camera shows tracker boxes and arrows.
 - The first screen shows impact numbers (resolved by the worker) with controls hidden.
 
-Git: work is on branch `v1-build`, ahead of `main`. Not yet merged or pushed. `main` holds the README, tagline, design doc and plan, and was pushed earlier with the repo description set.
+Git at the start of the geometry update: `main`, `v1-build` and cached `origin/main` pointed to `bae718f`. Check `git status` and branch refs for current changes.
 
 ## Known findings and simplifications
 
@@ -88,7 +88,7 @@ Git: work is on branch `v1-build`, ahead of `main`. Not yet merged or pushed. `m
 - Cloud coverage is statistical: the realized shaded fraction varies by about ±0.1 by seed.
 - Editing hull dimensions does not move other parts, so geometry can look odd after large hull edits.
 - The Controls drawer's Hardware group edits the worker design only. Edited designs do feed the impact numbers and the live sim.
-- Visuals are primitive boxes and cylinders, not detailed CAD.
+- Node visuals use meter-scale framed PV modules, hinges/struts, hollow shells, labeled battery packs, opened compute lids with representative modules in inspection, mounting hardware, cable/cooling routes and shrouded thrusters. Hardware envelopes remain estimates, not manufacturer CAD. The default equipment bays are checked for clearance; arbitrary hardware edits are gated for hydrostatics, not collision or packaging constraints. Stowing is still a simplified flat stack, not a validated folding mechanism.
 - The sky camera is a flat all-sky projection, not a true fisheye. The ocean is opaque from below.
 - Master failover and choosing scale-up regions are not modeled.
 - Real-GPU performance has not been tested.
@@ -96,10 +96,19 @@ Git: work is on branch `v1-build`, ahead of `main`. Not yet merged or pushed. `m
 
 ## Next steps
 
-1. Merge `v1-build` into `main` and push, once the owner agrees.
+1. Review the current geometry changes; commit and push when requested.
 2. Build the navigation harness behind `agentNavigatorStub` and connect an agentic reasoning model to it.
 3. Connect real SAM 3.1 behind `samTrackerPlaceholder()`.
 4. Test on a real GPU and tune level of detail.
-5. Replace primitive geometry with detailed CAD-quality parts.
+5. Validate equipment choices against manufacturer dimensions and refine the folding mechanism and packaging constraints.
 6. Model master failover and region selection for scale-up.
 7. Decide how the first screen frames the dodging result (headline on absolute output versus the comparison).
+
+
+## Node inspection update
+
+- `partPosition` is shared by rendering and hydrostatics: deployed centers rotate around edge hinges; stowed layers contribute their actual heights to the mass model.
+- `partEnvelope` supplies edited hull/panel dimensions for inspection readouts.
+- Assembled/exploded inspection is controlled by `inspectionExploded`. Impact is collapsed while inspecting to keep the hardware visible.
+- `CameraRig` explicitly enables screen-space panning. Shift + left-drag and right-drag pan; user input cancels automatic focus, and subsequent following adds only node displacement so manual offsets persist (`cameraFollow.ts`).
+- Playback includes 1×, 2× and 5×.

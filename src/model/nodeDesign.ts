@@ -4,7 +4,8 @@ const HULL_SIDE = 1.52;
 const HULL_DEPTH = 0.9;
 const KEEL_DEPTH = 0.35;
 const PETAL_LEN = 1.1;
-const DECK_Y = KEEL_DEPTH + HULL_DEPTH;
+export const NOMINAL_DECK_Y = KEEL_DEPTH + HULL_DEPTH;
+const DECK_Y = NOMINAL_DECK_Y;
 
 function part(
   id: string, name: string, subsystem: Subsystem, massKg: number,
@@ -23,17 +24,17 @@ function commonParts(): Part[] {
       'Narrow keel below the hull keeps heavy items low and puts cooling and thrusters in the water.'),
     part('ballast', 'Ballast', 'hull', 80, [0, 0.08, 0], [0.8, 0.08, 0.8], 0, 200,
       'Fixed ballast plate at the keel bottom lowers the center of gravity; the main tuning knob for stability.'),
-    part('battery', 'LFP battery pack (12 kWh)', 'power', 120, [0, 0.17, 0], [0.7, 0.25, 0.5], 0, 4800,
-      'Heaviest single item, mounted in the keel pod to keep the center of gravity low; sized to carry loads overnight.'),
-    part('bms', 'Battery management system', 'power', 4, [0.25, 0.3, 0], [0.2, 0.1, 0.15], 8, 400,
+    part('battery', 'LFP battery pack (12 kWh)', 'power', 120, [0, 0.25, 0.17], [0.7, 0.25, 0.5], 0, 4800,
+      'Estimated 700 × 250 × 500 mm sealed 12 kWh LFP pack, mounted on rails above the ballast in the keel pod to keep the center of gravity low; sized to carry loads overnight.'),
+    part('bms', 'Battery management system', 'power', 4, [0.38, 0.44, -0.02], [0.2, 0.1, 0.15], 8, 400,
       'Beside the battery to keep high-current runs short.'),
-    part('mppt-bus', 'MPPT controllers and DC bus', 'power', 8, [0, KEEL_DEPTH + 0.25, 0], [0.3, 0.2, 0.3], 15, 900,
+    part('mppt-bus', 'MPPT controllers and DC bus', 'power', 8, [-0.46, 0.57, -0.1], [0.3, 0.2, 0.3], 15, 900,
       'Near hull center so petal and deck PV cables stay short.'),
     part('deck-pv', 'Deck PV', 'power', 18, [0, DECK_Y, 0], [HULL_SIDE * 0.9, 0.04, HULL_SIDE * 0.9], 0, 900,
       'Fixed PV across the deck gives baseline power even with petals stowed.'),
-    part('compute-pod', 'Compute pod (2x data-center GPU, host)', 'compute', 35, [0, 0.22, 0.35], [0.5, 0.3, 0.4], 280, 9000,
-      'Sealed pod low in the keel, bolted to the hull wall so the heat exchanger can reach seawater.'),
-    part('heat-exchanger', 'Seawater heat exchanger', 'cooling', 12, [0, 0.12, -0.3], [0.5, 0.1, 0.3], 20, 600,
+    part('compute-pod', 'Compute pod (2x data-center GPU, host)', 'compute', 35, [0, 0.55, 0.3], [0.5, 0.3, 0.4], 280, 9000,
+      'Estimated 500 × 300 × 400 mm sealed dual-GPU enclosure on the lower hull tray, above the battery; cold plates connect to the seawater exchanger.'),
+    part('heat-exchanger', 'Seawater heat exchanger', 'cooling', 12, [0, 0.23, -0.475], [0.5, 0.18, 0.04], 20, 600,
       'Hull-wall plate exchanger; ocean water is the heat sink, so no fans or evaporative loss.'),
     part('gnss', 'GNSS receiver', 'navigation', 0.5, [h * 0.6, DECK_Y + 0.08, h * 0.6], [0.1, 0.05, 0.1], 2, 300,
       'Top of deck for a clear sky view.'),
@@ -47,7 +48,7 @@ function commonParts(): Part[] {
   const corners: [number, number][] = [[1, 1], [1, -1], [-1, -1], [-1, 1]];
   corners.forEach(([sx, sz], i) => {
     parts.push(part(`thruster-${i + 1}`, `Thruster ${i + 1} (45 deg)`, 'propulsion', 4.5,
-      [sx * h * 0.55, 0.3, sz * h * 0.55], [0.12, 0.12, 0.3], 300, 1200,
+      [sx * (h * 0.6 + 0.12), 0.23, sz * (h * 0.6 + 0.12)], [0.16, 0.16, 0.3], 300, 1200,
       'Fixed 45 degree corner thruster below the waterline; the four together push in any direction with no steering parts.'));
   });
   const dirs: [number, number, string][] = [[1, 0, 'E'], [0, 1, 'S'], [-1, 0, 'W'], [0, -1, 'N']];
@@ -79,9 +80,9 @@ export function masterDesign(): NodeDesign {
       'Lifts the terminal clear of petals when deployed.'),
     part('gnss-2', 'Redundant GNSS receiver', 'navigation', 0.5, [-h * 0.6, DECK_Y + 0.08, h * 0.6], [0.1, 0.05, 0.1], 2, 300,
       'Second receiver on the opposite corner; the master anchors the swarm formation.'),
-    part('battery-2', 'Extra battery pack', 'power', 60, [0, 0.17, -0.2], [0.5, 0.2, 0.3], 0, 2400,
-      'Carries the terminal and coordination load around the clock.'),
-    part('compute-2', 'Coordinator compute', 'compute', 30, [0, 0.22, -0.1], [0.4, 0.2, 0.3], 150, 5000,
+    part('battery-2', 'Extra battery pack', 'power', 60, [0, 0.23, -0.3], [0.5, 0.2, 0.26], 0, 2400,
+      'Estimated 6 kWh pack in a separate keel bay behind the main battery; carries the terminal and coordination load.'),
+    part('compute-2', 'Coordinator compute', 'compute', 30, [0, 0.55, -0.3], [0.4, 0.2, 0.3], 150, 5000,
       'Runs the swarm coordinator and the navigation agent interface.'),
   ]);
 }
@@ -93,4 +94,14 @@ export function partMassKg(d: NodeDesign): number {
 /** Deployed PV area: petals plus 80% of the deck. */
 export function pvAreaM2(d: NodeDesign): number {
   return d.petalCount * d.petalLengthM * d.hullSideM + 0.8 * d.hullSideM * d.hullSideM;
+}
+
+
+/** Rendered envelope, in meters, including geometry controlled by hardware knobs. */
+export function partEnvelope(d: NodeDesign, p: Part): [number, number, number] {
+  if (p.id === 'hull-shell') return [d.hullSideM, d.hullDepthM, d.hullSideM];
+  if (p.id === 'keel-pod') return [d.hullSideM * 0.6, d.keelDepthM, d.hullSideM * 0.6];
+  if (p.id === 'deck-pv') return [d.hullSideM * 0.9, p.size[1], d.hullSideM * 0.9];
+  if (p.id.startsWith('petal-')) return [p.pos[0] ? d.petalLengthM : d.hullSideM, p.size[1], p.pos[2] ? d.petalLengthM : d.hullSideM];
+  return p.size;
 }

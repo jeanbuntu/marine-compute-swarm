@@ -18,6 +18,7 @@ export function explodeOffsets(parts: Part[], factor: number): Record<string, [n
       p.subsystem === 'propulsion' || p.subsystem === 'petals'
         ? [Math.sign(p.pos[0]) * 1.1, 0, Math.sign(p.pos[2]) * 1.1]
         : [p.pos[0] * 0.8, 0, p.pos[2] * 0.8];
+    if (p.id === 'deck-pv') { out[p.id] = [0, 0.85 * factor, 0]; continue; }
     out[p.id] = [(fx + radial[0]) * factor, fy * factor, (fz + radial[2]) * factor];
   }
   return out;

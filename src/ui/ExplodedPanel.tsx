@@ -1,3 +1,4 @@
+import { partEnvelope } from '../model/nodeDesign';
 import { useMemo } from 'react';
 import { useStore } from '../state/store';
 import { evaluate, evaluateWorst } from '../model/hydrostatics';
@@ -11,6 +12,7 @@ const f = (n: number, d = 2) => Number(n.toFixed(d)).toString();
 
 export function ExplodedPanel() {
   const nodeId = useStore((s) => s.explodedNodeId);
+  const inspectionExploded = useStore((s) => s.inspectionExploded);
   const designs = useStore((s) => s.designs);
   const selectedPartId = useStore((s) => s.selectedPartId);
   const { explode, selectPart } = useStore.getState();
@@ -33,6 +35,11 @@ export function ExplodedPanel() {
         {role === 'master' ? 'Carries the swarm’s only Starlink terminal and the coordinator.' : 'Compute worker; links to the master over the mesh radio.'}
       </p>
 
+      <div className="row" style={{ marginBottom: 8 }}>
+        <button aria-pressed={!inspectionExploded} className={!inspectionExploded ? 'primary' : ''} onClick={() => useStore.getState().setInspectionExploded(false)}>Assembled</button>
+        <button aria-pressed={inspectionExploded} className={inspectionExploded ? 'primary' : ''} onClick={() => useStore.getState().setInspectionExploded(true)}>Exploded</button>
+      </div>
+      <p className="dim small">1 scene unit = 1 m · white scale bar = 1 m<br />Hull {f(design.hullSideM)} × {f(design.hullSideM)} × {f(design.hullDepthM)} m · keel {f(design.keelDepthM)} m deep<br />Deployed span {f(design.hullSideM + 2 * design.petalLengthM * Math.cos(20 * Math.PI / 180))} m · hardware dimensions EST</p>
       <span className={`pill ${worst.ok ? 'ok' : 'bad'}`}>{worst.ok ? 'Floats and stays upright' : `Unstable: ${worst.violations.join(', ')}`}</span>
       <div className="grid2" style={{ marginTop: 8 }}>
         <span>Mass <b>{f(worst.massKg, 0)} kg</b></span>
@@ -49,6 +56,7 @@ export function ExplodedPanel() {
         <>
           <h3>{part.name}</h3>
           <p style={{ margin: '0 0 8px' }}>{part.rationale}</p>
+          <p className="dim small">Envelope: {partEnvelope(design, part).map(v => `${Math.round(v * 1000)} mm`).join(" × ")} · EST</p>
           <PartEditor key={`${part.id}-${part.massKg}-${part.pos[1]}`} part={part} />
         </>
       )}

@@ -25,6 +25,6 @@ h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: 
 .small { font-size: 12px; }
 .topbar { left: 16px; top: 16px; display: flex; flex-direction: column; gap: 6px; max-width: 330px; }
 .topbar h1 { margin: 0; font-size: 20px; }
-.drawer { left: 16px; top: 128px; width: 340px; max-height: calc(100% - 144px); overflow: auto; }
+.drawer { left: 16px; top: 164px; width: 340px; max-height: calc(100% - 180px); overflow: auto; }
 .knob { margin: 8px 0; }
 .knob input[type=range] { padding: 0; }

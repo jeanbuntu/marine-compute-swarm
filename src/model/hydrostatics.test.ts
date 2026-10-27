@@ -1,4 +1,4 @@
-import { evaluate, evaluateWorst } from './hydrostatics';
+import { evaluate, evaluateWorst, partPosition, PETAL_TILT_DEG } from './hydrostatics';
 import { workerDesign, masterDesign } from './nodeDesign';
 import type { NodeDesign, Part } from './parts';
 
@@ -53,4 +53,26 @@ describe('hydrostatics', () => {
       }
     }
   });
+});
+
+
+test('deployed panel inner edges meet their hinges at every panel length', () => {
+  for (const length of [0.4, 1.1, 2]) {
+    const d = { ...workerDesign(), petalLengthM: length };
+    const angle = PETAL_TILT_DEG * Math.PI / 180;
+    for (const p of d.parts.filter(p => p.id.startsWith('petal-'))) {
+      const pos = partPosition(d, p, 'deployed');
+      const axis = p.pos[0] ? 0 : 2;
+      expect(Math.abs(pos[axis]) - Math.cos(angle) * length / 2).toBeCloseTo(d.hullSideM / 2);
+      expect(pos[1] - Math.sin(angle) * length / 2).toBeCloseTo(d.keelDepthM + d.hullDepthM + 0.08);
+    }
+  }
+});
+
+
+test('stowed panels have separate layers in both the mass model and the scene', () => {
+  const d = workerDesign();
+  const ps = d.parts.filter(p => p.id.startsWith('petal-'));
+  const heights = ps.map(p => partPosition(d, p, 'stowed')[1]);
+  for (let i = 1; i < heights.length; i++) expect(heights[i] - heights[i - 1]).toBeGreaterThanOrEqual(0.05);
 });

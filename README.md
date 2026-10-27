@@ -20,7 +20,9 @@ Optional starting view from the address bar: `?cam=x,y,z&target=x,y,z&explode=n0
 ## What you see
 
 - **First screen:** the swarm on a 3D ocean under a 3D cloud layer, with the value up front: energy harvested, compute delivered, revenue and carbon avoided for a daylight day, each compared with a swarm that only holds station. Scale buttons show the same numbers at 100, 1,000 and 10,000 nodes. The detailed controls live behind the **Controls** button.
-- **Move around:** orbit, pan and zoom from the whole swarm down to one node, and dive below the surface (to 15 m) to see hulls, keels and thrusters from underneath.
+- **Move around:** drag to orbit, Shift + left-drag (or right-drag) to pan, and scroll to zoom from the whole swarm down to one node, and dive below the surface (to 15 m) to see hulls, keels and thrusters from underneath.
+- **Playback:** 1×, 2× and 5× allow slow inspection alongside the faster simulation speeds.
+- **Hardware scale:** one scene unit is one meter. Black cell-pattern PV panels meet physical hinges and support struts. Battery packs, compute enclosures, heat exchanger, antennas and thrusters have distinct geometry and mounts. Inspection offers assembled and exploded views, equipment dimensions in millimeters, and a one-meter scale bar. Equipment envelopes and the exposed GPU modules are representative estimates, not manufacturer CAD; the assembled compute remains in its sealed enclosure.
 - **Hover and click:** hovering a node or a petal highlights it. Clicking a node opens its exploded view: every subsystem fanned apart, each part with a mass, power, cost and a one-line reason for its placement, all editable.
 - **Stays afloat:** every part has a mass and a position. Draft, freeboard, reserve buoyancy, metacentric height and wind heel are computed live, with petals deployed and stowed. An edit that would sink the node or tip it over is blocked, and the app recommends which other knobs to change so the value you want can work.
 - **Sky camera:** selecting a node shows what its sky camera sees, with tracked clouds boxed and their motion drawn as arrows, plus the navigator's current decision and reason.
