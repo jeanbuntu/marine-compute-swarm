@@ -20,10 +20,11 @@ export interface CloudTracker { track(frame: SkyFrame): TrackedCloud[] }
  * with position noise and random dropouts, so downstream code sees realistic output.
  */
 export function simulatedTracker(sky: Sky, opts: { noiseM: number; dropRate: number; seed: number }): CloudTracker {
+  let memo: { t: number; now: ReturnType<Sky['clouds']>; next: ReturnType<Sky['clouds']> } | null = null;
   return {
     track(f) {
-      const now = sky.clouds(f.t);
-      const next = sky.clouds(f.t + 1);
+      if (!memo || memo.t !== f.t) memo = { t: f.t, now: sky.clouds(f.t), next: sky.clouds(f.t + 1) };
+      const { now, next } = memo;
       const out: TrackedCloud[] = [];
       for (const [i, c] of now.entries()) {
         const dx = wrapM(c.x - f.x), dy = wrapM(c.y - f.y);
