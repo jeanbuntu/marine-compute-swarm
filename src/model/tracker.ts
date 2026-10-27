@@ -8,6 +8,7 @@ export interface TrackedCloud {
   id: number;
   bbox: [number, number, number, number]; // pixels: x0, y0, x1, y1
   centroidM: [number, number]; // world meters
+  radiusM: number;
   velocityMs: [number, number];
   opacity: number;
   confidence: number;
@@ -36,6 +37,7 @@ export function simulatedTracker(sky: Sky, opts: { noiseM: number; dropRate: num
           id: c.id,
           bbox: [toPx(cx - r, f.widthPx), toPx(-(cy + r), f.heightPx), toPx(cx + r, f.widthPx), toPx(-(cy - r), f.heightPx)],
           centroidM: [f.x + cx, f.y + cy],
+          radiusM: r,
           velocityMs: [wrapM(next[i].x - c.x), wrapM(next[i].y - c.y)],
           opacity: c.opacity,
           confidence: Math.max(0.3, 1 - opts.noiseM / 500),
