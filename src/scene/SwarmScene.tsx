@@ -4,6 +4,7 @@ import { useStore } from '../state/store';
 import { Atmosphere } from './Atmosphere';
 import { CameraRig } from './CameraRig';
 import { Clouds } from './Clouds';
+import { NodeCameraView } from './NodeCameraView';
 import { Nodes } from './Nodes';
 import { Ocean } from './Ocean';
 import { SimDriver } from './SimDriver';
@@ -26,6 +27,7 @@ export function SwarmScene() {
       <Ocean />
       <Clouds />
       <Nodes />
+      <NodeCameraView />
       <CameraRig target={START.target ?? [0, 0, 0]} />
     </Canvas>
   );

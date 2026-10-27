@@ -11,6 +11,23 @@ const PUFFS_PER_CLOUD = 6;
 const DECK_RADIUS_M = 1500; // clouds this wide render as flat sheets
 const RAD = Math.PI / 180;
 
+/** Makes instanced quads face whichever camera renders them (main view or a node camera). */
+function billboard(shader: { vertexShader: string }) {
+  shader.vertexShader = shader.vertexShader.replace(
+    '#include <project_vertex>',
+    `vec4 mvPosition = vec4(transformed, 1.0);
+#ifdef USE_INSTANCING
+  vec3 center = instanceMatrix[3].xyz;
+  vec2 sz = vec2(length(instanceMatrix[0].xyz), length(instanceMatrix[1].xyz));
+  mvPosition = modelViewMatrix * vec4(center, 1.0);
+  mvPosition.xy += position.xy * sz;
+#else
+  mvPosition = modelViewMatrix * mvPosition;
+#endif
+gl_Position = projectionMatrix * mvPosition;`,
+  );
+}
+
 function rand(id: number, k: number) {
   const x = Math.sin(id * 127.1 + k * 311.7) * 43758.5453;
   return x - Math.floor(x);
@@ -26,7 +43,7 @@ export function Clouds() {
   const dummy = useMemo(() => new Object3D(), []);
   const color = useMemo(() => new Color(), []);
 
-  useFrame(({ camera }) => {
+  useFrame(() => {
     const p = puffs.current, d = decks.current, sc = shadowsCu.current, sd = shadowsDeck.current;
     if (!p || !d || !sc || !sd) return;
     const clouds = sim.sky.clouds(sim.timeS);
@@ -53,7 +70,7 @@ export function Clouds() {
           const ox = (rand(c.id, k) - 0.5) * c.radiusM * 1.2, oz = (rand(c.id, k + 20) - 0.5) * c.radiusM * 1.2;
           const rel = rand(c.id, k + 40);
           dummy.position.set(c.x + ox, c.altM + rel * c.thicknessM, -c.y + oz);
-          dummy.quaternion.copy(camera.quaternion);
+          dummy.quaternion.identity();
           const s = c.radiusM * (0.9 + rand(c.id, k + 60) * 0.7);
           dummy.scale.set(s, s * 0.7, 1);
           dummy.updateMatrix();
@@ -89,7 +106,7 @@ export function Clouds() {
     <>
       <instancedMesh ref={puffs} args={[undefined, undefined, MAX_PUFFS]} frustumCulled={false} renderOrder={3}>
         <planeGeometry args={[1, 1]} />
-        <meshBasicMaterial map={tex.puff} transparent depthWrite={false} opacity={0.9} side={DoubleSide} />
+        <meshBasicMaterial map={tex.puff} transparent depthWrite={false} opacity={0.9} side={DoubleSide} onBeforeCompile={billboard} />
       </instancedMesh>
       <instancedMesh ref={decks} args={[undefined, undefined, MAX_DECKS]} frustumCulled={false} renderOrder={2}>
         <planeGeometry args={[1, 1]} />

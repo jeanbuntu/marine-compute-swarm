@@ -10,7 +10,7 @@ export function HoverCard() {
   const part = partId ? designs[role].parts.find((p) => p.id === partId) : null;
   const exploded = useStore.getState().explodedNodeId === nodeId;
   return (
-    <div className="panel" style={{ left: 16, bottom: 16, maxWidth: 360, pointerEvents: 'none' }}>
+    <div className="panel" style={{ left: '50%', transform: 'translateX(-50%)', bottom: 16, maxWidth: 360, pointerEvents: 'none' }}>
       {part ? (
         <>
           <b>{part.name}</b>
