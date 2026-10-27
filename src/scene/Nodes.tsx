@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Group, Sprite, Vector3 } from 'three';
 import { useStore } from '../state/store';
@@ -7,7 +7,8 @@ import { evaluate } from '../model/hydrostatics';
 import { NodeModel } from './NodeModel';
 import { explodeOffsets, EXPLODE_FACTOR } from './explode';
 
-const DETAIL_DIST_M = 90; // draw the full 3D model inside this range
+import { DETAIL_DIST_M, showDetail } from './lod';
+
 const MARKER_MIN_DIST_M = DETAIL_DIST_M;
 export const EXPLODED_LIFT_M = 1.8; // exploded nodes float above the water so no part is hidden by it
 const _v = new Vector3();
@@ -34,7 +35,7 @@ function SwarmNode({ index }: { index: number }) {
   const selectedPart = useStore((s) => s.selectedPartId);
   const { hover, explode, selectPart } = useStore.getState();
   const root = useRef<Group>(null);
-  const detail = useRef<Group>(null);
+  const [near, setNear] = useState(false);
   const marker = useRef<Sprite>(null);
   const { camera } = useThree();
   const draft = useMemo(() => evaluate(design, 'deployed').draftM, [design]);
@@ -53,13 +54,15 @@ function SwarmNode({ index }: { index: number }) {
     root.current.position.set(n.pos[0], Math.sin(t * 0.9 + ph) * 0.04, -n.pos[1]);
     root.current.rotation.set(Math.sin(t * 0.7 + ph) * 0.02, 0, Math.cos(t * 0.8 + ph) * 0.02);
     const dist = camera.position.distanceTo(_v.set(n.pos[0], 0, -n.pos[1]));
-    if (detail.current) detail.current.visible = dist < DETAIL_DIST_M || exploded;
+    const want = showDetail(dist, exploded, near);
+    if (want !== near) setNear(want);
     if (marker.current) marker.current.visible = dist > MARKER_MIN_DIST_M && !exploded;
   });
 
   return (
     <group ref={root} name={id}>
-      <group ref={detail} position={[0, exploded ? EXPLODED_LIFT_M : -draft, 0]}>
+      {(near || exploded) && (
+      <group position={[0, exploded ? EXPLODED_LIFT_M : -draft, 0]}>
         <NodeModel
           design={design}
           petals={sim.sky.sun(sim.timeS).ghiWm2 > 0 ? 'deployed' : 'stowed'}
@@ -71,6 +74,7 @@ function SwarmNode({ index }: { index: number }) {
           onPartClick={(p) => (exploded ? selectPart(p) : explode(id))}
         />
       </group>
+      )}
       <sprite
         ref={marker} scale={[0.018, 0.018, 1]}
         onPointerOver={(e) => { e.stopPropagation(); hover(id); }}

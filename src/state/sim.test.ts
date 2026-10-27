@@ -33,4 +33,12 @@ describe('Sim', () => {
     expect(s.timeS).toBeCloseTo(9 * 3600 + 600, 6);
     for (const n of s.swarm.nodes) expect(Math.hypot(...n.pos)).toBeLessThan(5000);
   });
+
+  test('a 100 node swarm steps a frame quickly', () => {
+    const s = new Sim({ ...defaultConfig(), nodes: 100 }, 9 * 3600);
+    s.step(2);
+    const t0 = performance.now();
+    s.step(2);
+    expect(performance.now() - t0).toBeLessThan(50);
+  });
 });
