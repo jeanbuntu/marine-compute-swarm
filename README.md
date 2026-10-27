@@ -1,5 +1,7 @@
 # Solar Swarm
 
+**Data centers that follow the sun.** A swarm of floating, solar-powered compute nodes that watches the sky, dodges the clouds, and turns sunlight into compute across the planet.
+
 A swarm of solar-powered floating compute modules that sees the sky, tracks the clouds, and steers itself toward sunlight. Solar Swarm is the simulation that shows how that works and what it is worth.
 
 ## The idea
