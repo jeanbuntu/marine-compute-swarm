@@ -18,6 +18,8 @@ npx tsc --noEmit                          # type check only
 
 No linter is configured.
 
+Master node bench: `?view=master` (see `AGENTS.md` and `docs/design/2026-10-27-master-node-view-design.md`). Deploy: `npx vercel@latest deploy --prod --yes`, live at https://solar-swarm.vercel.app.
+
 ## Rules that constrain changes
 
 - Keep repo text, commit messages and docs about the product only. Do not mention how the project was started or which tools were used. Do not add attribution trailers to commits. (This file and the name `CLAUDE.md` are the one exception, by the owner's request.)
@@ -45,3 +47,5 @@ Plug-in seams for planned work: `CloudTracker` in `tracker.ts` (`samTrackerPlace
 - `src/setupTests.ts` mocks canvas `getContext` for jsdom; the scene cannot render in tests, so check visuals in a real browser.
 - Default max speed is 0.4 m/s on purpose: at 1.5 m/s thrust consumed all PV output.
 - Editing hull dimensions does not move other parts (known V1 simplification).
+- Master view: `src/model/master/` is pure and tested; `msim` (`src/state/master.ts`) is stepped by `MasterDriver` at priority -1, and `MasterRender` is the only priority-1 `useFrame`, so it owns rendering. Do not add another. Petal angles are written to meshes each frame, not through React props.
+- Master view axes: x east, y up, z south; sky north is -z. Petal tilt is positive when the outer edge rises. Attitude is Ry(yaw) Rx(pitch) Rz(roll), three's `YXZ`.

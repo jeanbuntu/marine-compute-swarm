@@ -27,6 +27,12 @@ Optional starting view from the address bar: `?cam=x,y,z&target=x,y,z&explode=n0
 - **Stays afloat:** every part has a mass and a position. Draft, freeboard, reserve buoyancy, metacentric height and wind heel are computed live, with petals deployed and stowed. An edit that would sink the node or tip it over is blocked, and the app recommends which other knobs to change so the value you want can work.
 - **Sky camera:** selecting a node shows what its sky camera sees, with tracked clouds boxed and their motion drawn as arrows, plus the navigator's current decision and reason.
 
+## Master node bench
+
+Open `?view=master` (or the link on the first screen) for a view of the master node alone, simulated in much finer detail. Waves move the hull and the water, and the four petals tilt individually to track the sun, with the angle, rate and power gain over fixed petals shown live. Pin the sun anywhere, change the sea state, wind and current, and watch the thrusters, their jets and flow particles as the node holds station or moves. A fisheye sky camera, which sees the node's own petals and mast, comes with ground truth, a simulated segmenter, tracking scores, and frame export and detection import for running SAM offline.
+
+Live at https://solar-swarm.vercel.app.
+
 ## The node
 
 Every node has a sealed square hull with a keel pod, four hinged PV petals, a battery and compute pod low in the keel, a seawater heat exchanger, four fixed 45° corner thrusters that move the node in any direction without steering parts, GNSS, an IMU, a sky camera and a mesh radio.

@@ -9,6 +9,7 @@ export interface SkyConfig {
   latDeg: number;
   lonDeg: number;
   doy?: number; // day of year, default 200
+  sunOverride?: { azDeg: number; elevDeg: number }; // pins the sun for what-if studies
 }
 export interface Cloud { id: number; x: number; y: number; altM: number; radiusM: number; thicknessM: number; opacity: number }
 export interface SunState { elevDeg: number; azDeg: number; ghiWm2: number }
@@ -56,6 +57,10 @@ export function makeSky(c: SkyConfig): Sky {
   const lat = c.latDeg * RAD;
 
   const sun = (t: number): SunState => {
+    if (c.sunOverride) {
+      const e = c.sunOverride.elevDeg;
+      return { elevDeg: e, azDeg: ((c.sunOverride.azDeg % 360) + 360) % 360, ghiWm2: e > 0 ? 1050 * Math.sin(e * RAD) ** 1.2 : 0 };
+    }
     const hour = (((t / 3600) % 24) + 24) % 24; // t is local solar seconds
     const H = 15 * (hour - 12) * RAD;
     const sinE = Math.sin(lat) * Math.sin(decl) + Math.cos(lat) * Math.cos(decl) * Math.cos(H);

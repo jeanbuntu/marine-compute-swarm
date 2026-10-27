@@ -21,6 +21,7 @@ export function HeroPanel() {
         <b>{clock(timeS)}</b>
         <button onClick={() => setDrawer(!drawerOpen)} aria-expanded={drawerOpen}>Controls</button>
       </div>
+      <div className="small"><a href="?view=master" style={{ color: 'var(--accent)' }}>Master node bench →</a></div>
       <div className="dim small">Drag to orbit · Shift + drag to pan · Scroll to zoom</div>
     </header>
   );

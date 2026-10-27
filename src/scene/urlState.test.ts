@@ -6,3 +6,12 @@ test('parses camera, target and explode', () => {
 test('ignores malformed values', () => {
   expect(readUrlState('?cam=1,2&target=a,b,c&explode=x')).toEqual({ cam: null, target: null, explode: null });
 });
+
+describe('readView', () => {
+  it('opens the master bench only when asked', async () => {
+    const { readView } = await import('./urlState');
+    expect(readView('?view=master')).toBe('master');
+    expect(readView('')).toBe('swarm');
+    expect(readView('?view=other')).toBe('swarm');
+  });
+});

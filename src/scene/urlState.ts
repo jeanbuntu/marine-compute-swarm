@@ -12,3 +12,8 @@ export function readUrlState(search: string): { cam: V3 | null; target: V3 | nul
   const explode = q.get('explode');
   return { cam: vec(q.get('cam')), target: vec(q.get('target')), explode: explode && /^n\d+$/.test(explode) ? explode : null };
 }
+
+/** Which top-level view the address asks for: ?view=master opens the master node bench. */
+export function readView(search: string): 'swarm' | 'master' {
+  return new URLSearchParams(search).get('view') === 'master' ? 'master' : 'swarm';
+}

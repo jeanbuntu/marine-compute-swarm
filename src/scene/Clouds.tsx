@@ -2,6 +2,7 @@ import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Color, InstancedMesh, Object3D, DoubleSide } from 'three';
 import { sim } from '../state/sim';
+import type { Sky } from '../model/sky';
 import { puffTexture, shadowTexture } from './textures';
 
 const MAX_PUFFS = 14000;
@@ -34,7 +35,7 @@ function rand(id: number, k: number) {
 }
 
 /** 3D clouds as camera-facing puffs (cumulus) and flat sheets (marine layer), plus their shadows on the water. */
-export function Clouds() {
+export function Clouds({ source = sim, shadows = true }: { source?: { sky: Sky; timeS: number }; shadows?: boolean } = {}) {
   const puffs = useRef<InstancedMesh>(null);
   const decks = useRef<InstancedMesh>(null);
   const shadowsCu = useRef<InstancedMesh>(null);
@@ -46,8 +47,8 @@ export function Clouds() {
   useFrame(() => {
     const p = puffs.current, d = decks.current, sc = shadowsCu.current, sd = shadowsDeck.current;
     if (!p || !d || !sc || !sd) return;
-    const clouds = sim.sky.clouds(sim.timeS);
-    const sun = sim.sky.sun(sim.timeS);
+    const clouds = source.sky.clouds(source.timeS);
+    const sun = source.sky.sun(source.timeS);
     const tanE = Math.tan(Math.max(sun.elevDeg, 5) * RAD);
     const sx = Math.sin(sun.azDeg * RAD), sy = Math.cos(sun.azDeg * RAD);
     let np = 0, nd = 0, ncs = 0, nds = 0;
@@ -80,7 +81,7 @@ export function Clouds() {
           np++;
         }
       }
-      if (sun.elevDeg > 0) {
+      if (shadows && sun.elevDeg > 0) {
         const throwM = c.altM / tanE;
         const wx = c.x - sx * throwM, wz = -(c.y - sy * throwM);
         const target = isDeck ? sd : sc;

@@ -52,3 +52,12 @@ describe('sky', () => {
     expect(sky.sun(NOON).ghiWm2).toBeGreaterThan(800);
   });
 });
+
+describe('sun override', () => {
+  it('pins the sun and its clear-sky irradiance regardless of time', () => {
+    const sky = makeSky({ seed: 1, coverage: 0, windMs: [0, 0], latDeg: 30, lonDeg: 0, sunOverride: { azDeg: 100, elevDeg: 25 } });
+    expect(sky.sun(0).elevDeg).toBe(25);
+    expect(sky.sun(50000).azDeg).toBe(100);
+    expect(sky.sun(0).ghiWm2).toBeCloseTo(1050 * Math.sin((25 * Math.PI) / 180) ** 1.2, 6);
+  });
+});

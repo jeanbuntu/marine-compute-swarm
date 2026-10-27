@@ -23,11 +23,11 @@ function material(color: string, hot = false, ghost = false) {
   }));
   return mats.get(key)!;
 }
-function Block({ at = [0, 0, 0], size, color = '#83969a', hot = false, ghost = false }: { at?: V3; size: V3; color?: string; hot?: boolean; ghost?: boolean }) {
+export function Block({ at = [0, 0, 0], size, color = '#83969a', hot = false, ghost = false }: { at?: V3; size: V3; color?: string; hot?: boolean; ghost?: boolean }) {
   return <mesh geometry={box} material={material(color, hot, ghost)} position={at} scale={size} />;
 }
 /** A real length of tube between mounting points, in meters. */
-function Tube({ a, b, radius = 0.015, color = '#8e9b9d' }: { a: V3; b: V3; radius?: number; color?: string }) {
+export function Tube({ a, b, radius = 0.015, color = '#8e9b9d' }: { a: V3; b: V3; radius?: number; color?: string }) {
   const start = new Vector3(...a), end = new Vector3(...b), delta = end.clone().sub(start);
   const q = new Quaternion().setFromUnitVectors(new Vector3(0, 1, 0), delta.clone().normalize());
   return <mesh geometry={cyl} material={material(color)} position={start.add(end).multiplyScalar(0.5)} quaternion={q} scale={[radius, delta.length(), radius]} />;
@@ -66,7 +66,7 @@ function Label({ text, at, width, top = false }: { text: string; at: V3; width: 
   }
   return <mesh position={at} rotation={top ? [-Math.PI / 2, 0, 0] : [0, 0, 0]} material={labelMats.get(text)}><planeGeometry args={[width, width / 4]} /></mesh>;
 }
-function SolarPanel({ width, depth, thickness, hot }: { width: number; depth: number; thickness: number; hot: boolean }) {
+export function SolarPanel({ width, depth, thickness, hot }: { width: number; depth: number; thickness: number; hot: boolean }) {
   return <group>
     <Block size={[width, thickness, depth]} color="#a9b7b9" hot={hot} />
     <mesh position={[0, thickness / 2 + 0.001, 0]} rotation={[-Math.PI / 2, 0, 0]} material={solarMaterial(width, depth, hot)}>
@@ -95,11 +95,11 @@ function Shell({ width, height, hot, ghost, keel = false }: { width: number; hei
 
 export interface NodeModelProps {
   design: NodeDesign; petals: PetalState; offsets?: Record<string, V3>;
-  highlightId?: string | null; hotAll?: boolean; ghostShell?: boolean;
+  highlightId?: string | null; hotAll?: boolean; ghostShell?: boolean; hidePetals?: boolean;
   onPartOver?(id: string | null): void; onPartClick?(id: string): void;
 }
 
-export function NodeModel({ design, petals, offsets = {}, highlightId, hotAll, ghostShell, onPartOver, onPartClick }: NodeModelProps) {
+export function NodeModel({ design, petals, offsets = {}, highlightId, hotAll, ghostShell, hidePetals, onPartOver, onPartClick }: NodeModelProps) {
   const separated = Object.keys(offsets).length > 0;
   const battery = design.parts.find(p => p.id === 'battery');
   const bus = design.parts.find(p => p.id === 'mppt-bus');
@@ -121,7 +121,7 @@ export function NodeModel({ design, petals, offsets = {}, highlightId, hotAll, g
       const e: V3 = [a[0], exchanger.pos[1] + exchanger.size[1] * 0.3, c[2]];
       return <group key={s}><Tube a={a} b={b} radius={0.012} color="#344e55" /><Tube a={b} b={c} radius={0.012} color="#344e55" /><Tube a={c} b={e} radius={0.012} color="#344e55" /></group>;
     })}
-    {design.parts.map(p => <PartMesh key={p.id} part={p} design={design} petals={petals} offset={offsets[p.id]} hot={!!hotAll || highlightId === p.id} ghost={!!ghostShell && (p.subsystem === 'hull' || p.id === 'deck-pv')} separated={separated} onOver={onPartOver} onClick={onPartClick} />)}
+    {design.parts.filter(p => !(hidePetals && p.id.startsWith('petal-'))).map(p => <PartMesh key={p.id} part={p} design={design} petals={petals} offset={offsets[p.id]} hot={!!hotAll || highlightId === p.id} ghost={!!ghostShell && (p.subsystem === 'hull' || p.id === 'deck-pv')} separated={separated} onOver={onPartOver} onClick={onPartClick} />)}
   </group>;
 }
 

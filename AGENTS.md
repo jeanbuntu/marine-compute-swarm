@@ -70,7 +70,7 @@ Three layers, dependencies pointing downward only.
 
 Everything in the 15-task V1 plan (`docs/plans/2026-10-26-solar-swarm-v1.md`) is implemented. Design doc: `docs/design/2026-10-26-solar-swarm-v1-design.md`.
 
-Status at last check: `tsc` clean, 24 test files / 123 tests passing, production build succeeds.
+Status at last check: `tsc` clean, 32 test files / 193 tests passing, production build succeeds.
 
 Verified in headless Chrome (software GL) by screenshots and real mouse events:
 - Ocean, clouds and cloud shadows render.
@@ -93,6 +93,22 @@ Git at the start of the geometry update: `main`, `v1-build` and cached `origin/m
 - Master failover and choosing scale-up regions are not modeled.
 - Real-GPU performance has not been tested.
 - `format.ts` and `urlState.ts` were written before their tests.
+
+## Master node bench (`?view=master`)
+
+Design: `docs/design/2026-10-27-master-node-view-design.md`. Simulates only the master node: waves, hull motion, per-petal sun tracking, station keeping and a fisheye sky camera with a cloud-segmentation debug harness. It never steps the swarm.
+
+- Pure model in `src/model/master/`; live instance `msim` and UI state in `src/state/master.ts`; scene in `src/scene/master/`; panels in `src/ui/master/`.
+- Starting conditions via URL: `?view=master&mview=close|under|top|sky&tab=petals|propulsion|sky&az=95&el=12&sea=calm|swell|chop|storm&wind=3`.
+- The fisheye sees the node's own petals and mast. East is on the image's left (upward-looking camera). Overlay ground truth is an analytic footprint disc, approximate for cumulus.
+- Real SAM is not connected. Workflow: pause, Export frame (PNG + JSON), run a model offline, Import detections (`{"detections":[{"polygon":[[x,y]],"score":0.9}]}`). `samTrackerPlaceholder()` still throws.
+- The master view's PV uses beam/diffuse irradiance on each tilted face, so it differs from the swarm model's flat area x GHI. It is shown side by side on purpose; `power.ts` was not changed.
+- Findings: petals capture most of the gain; yaw assist is worth about 1% and the as-built radial thrusters have no yaw authority; wind drag dominates station keeping.
+- Known simplifications: no petal-to-petal or mast shading, particle plumes are a Gaussian jet model not CFD, hull response constants are EST.
+
+## Deployment
+
+Production: https://solar-swarm.vercel.app (Vercel project `solar-swarm`, linked in `.vercel/`, which is git-ignored). Vercel names cannot contain underscores, so `solar_swarm` is not available. `vercel.json` pins Vite and `dist`. Deploy with `npx vercel@latest deploy --prod --yes` from the repo root. The project is not yet connected to a Git remote, so pushes do not deploy by themselves.
 
 ## Next steps
 

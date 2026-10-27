@@ -1,4 +1,6 @@
+import { MasterApp } from './ui/master/MasterApp';
 import { SwarmScene } from './scene/SwarmScene';
+import { readView } from './scene/urlState';
 import { hasWebGL } from './scene/webgl';
 import { ExplodedPanel } from './ui/ExplodedPanel';
 import { HeroPanel } from './ui/HeroPanel';
@@ -9,6 +11,7 @@ import { NodeCameraPanel } from './ui/NodeCameraPanel';
 import './ui/styles.css';
 
 export function App() {
+  if (typeof window !== 'undefined' && readView(window.location.search) === 'master') return <MasterApp />;
   const webgl = hasWebGL();
   return (
     <div style={{ position: 'fixed', inset: 0, background: '#0b1630' }}>

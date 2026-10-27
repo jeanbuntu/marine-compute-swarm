@@ -10,7 +10,7 @@ export interface NodeState { id: string; role: 'worker' | 'master'; pos: Vec2; v
 export interface Swarm { t: number; nodes: NodeState[]; slots: Vec2[] }
 
 // Propulsion model (all EST): P = 0.5 * rho * Cd * A * v^3 / eta
-const CD = 1.0, FRONTAL_M2 = 0.35, PROP_EFF = 0.4;
+export const CD = 1.0, FRONTAL_M2 = 0.35, PROP_EFF = 0.4;
 const WH_PER_KG = 100; // LFP pack level, EST
 export const thrustPowerW = (speedMs: number) => (0.5 * RHO_SEA * CD * FRONTAL_M2 * Math.abs(speedMs) ** 3) / PROP_EFF;
 
