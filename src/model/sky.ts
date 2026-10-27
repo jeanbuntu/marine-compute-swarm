@@ -19,7 +19,7 @@ export interface Sky {
 }
 
 const RAD = Math.PI / 180;
-const wrap = (v: number) => ((((v + DOMAIN_M / 2) % DOMAIN_M) + DOMAIN_M) % DOMAIN_M) - DOMAIN_M / 2;
+export const wrapM = (v: number) => ((((v + DOMAIN_M / 2) % DOMAIN_M) + DOMAIN_M) % DOMAIN_M) - DOMAIN_M / 2;
 const MIN_ELEV_DEG = 5; // cap shadow throw near the horizon
 
 export function makeSky(c: SkyConfig): Sky {
@@ -66,7 +66,7 @@ export function makeSky(c: SkyConfig): Sky {
   };
 
   const clouds = (t: number): Cloud[] =>
-    base.map((b) => ({ ...b, x: wrap(b.x + c.windMs[0] * t), y: wrap(b.y + c.windMs[1] * t) }));
+    base.map((b) => ({ ...b, x: wrapM(b.x + c.windMs[0] * t), y: wrapM(b.y + c.windMs[1] * t) }));
 
   const shadowFactor = (t: number, x: number, y: number): number => {
     if (base.length === 0) return 1;
@@ -76,9 +76,9 @@ export function makeSky(c: SkyConfig): Sky {
     let f = 1;
     for (const b of base) {
       const throwM = b.altM / tanE;
-      const cx = wrap(b.x + c.windMs[0] * t) - sx * throwM;
-      const cy = wrap(b.y + c.windMs[1] * t) - sy * throwM;
-      const d = Math.hypot(wrap(x - cx), wrap(y - cy));
+      const cx = wrapM(b.x + c.windMs[0] * t) - sx * throwM;
+      const cy = wrapM(b.y + c.windMs[1] * t) - sy * throwM;
+      const d = Math.hypot(wrapM(x - cx), wrapM(y - cy));
       if (d >= b.radiusM) continue;
       const edge = d <= b.radiusM * 0.7 ? 1 : 1 - (d - b.radiusM * 0.7) / (b.radiusM * 0.3);
       f *= 1 - b.opacity * edge;
