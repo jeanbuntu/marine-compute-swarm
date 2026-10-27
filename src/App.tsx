@@ -1,18 +1,24 @@
 import { SwarmScene } from './scene/SwarmScene';
 import { hasWebGL } from './scene/webgl';
 import { ExplodedPanel } from './ui/ExplodedPanel';
+import { HeroPanel } from './ui/HeroPanel';
 import { HoverCard } from './ui/HoverCard';
+import { ImpactStrip } from './ui/ImpactStrip';
+import { KnobDrawer } from './ui/KnobDrawer';
 import { NodeCameraPanel } from './ui/NodeCameraPanel';
 import './ui/styles.css';
 
 export function App() {
+  const webgl = hasWebGL();
   return (
     <div style={{ position: 'fixed', inset: 0, background: '#0b1630' }}>
-      {hasWebGL() ? <SwarmScene /> : <p style={{ color: '#cfe6ff', padding: 24 }}>3D view needs WebGL, which this browser does not provide.</p>}
+      {webgl ? <SwarmScene /> : <p style={{ color: '#cfe6ff', padding: '200px 24px 24px' }}>The 3D view needs WebGL, which this browser does not provide.</p>}
+      <HeroPanel />
+      <ImpactStrip />
+      <KnobDrawer />
       <ExplodedPanel />
       <HoverCard />
-      <NodeCameraPanel />
-      <h1 style={{ position: 'absolute', top: 12, left: 16, margin: 0, color: '#fff', fontSize: 18, pointerEvents: 'none' }}>Solar Swarm</h1>
+      {webgl && <NodeCameraPanel />}
     </div>
   );
 }

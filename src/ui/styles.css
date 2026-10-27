@@ -19,3 +19,12 @@ input { font: inherit; color: var(--ink); background: rgba(255,255,255,0.07); bo
 .banner { border: 1px solid var(--bad); background: rgba(255,107,107,0.1); border-radius: 8px; padding: 10px; margin: 10px 0; }
 h2, h3 { margin: 0 0 6px; }
 h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--dim); margin-top: 12px; }
+.impact { left: 50%; transform: translateX(-50%); top: 16px; width: min(760px, calc(100% - 860px)); min-width: 520px; }
+.cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.card .big { font-size: 22px; font-weight: 650; }
+.small { font-size: 12px; }
+.topbar { left: 16px; top: 16px; display: flex; flex-direction: column; gap: 6px; max-width: 330px; }
+.topbar h1 { margin: 0; font-size: 20px; }
+.drawer { left: 16px; top: 128px; width: 340px; max-height: calc(100% - 144px); overflow: auto; }
+.knob { margin: 8px 0; }
+.knob input[type=range] { padding: 0; }

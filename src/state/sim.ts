@@ -1,6 +1,6 @@
 import { defaultConfig, type ScenarioConfig } from '../model/config';
 import { makeSky, type Sky } from '../model/sky';
-import { makeSwarm, stepSwarm, type Swarm, type Vec2 } from '../model/swarm';
+import { makeSwarm, stepSwarm, type Designs, type Swarm, type Vec2 } from '../model/swarm';
 import { scriptedNavigator, type Command, type Navigator } from '../model/navigator';
 import { simulatedTracker, type CloudTracker, type TrackedCloud } from '../model/tracker';
 
@@ -17,6 +17,7 @@ export class Sim {
   lastCmds: Command[] = [];
   lastTracked: Record<string, TrackedCloud[]> = {};
   timeS: number;
+  designs?: Designs;
   private sinceDecide = Infinity;
 
   constructor(config: ScenarioConfig, timeS: number) {
@@ -32,7 +33,7 @@ export class Sim {
       latDeg: config.latDeg, lonDeg: config.lonDeg,
     });
     this.tracker = simulatedTracker(this.sky, { noiseM: config.trackerNoiseM, dropRate: config.trackerDropRate, seed: config.seed });
-    this.swarm = makeSwarm(config.nodes, config.spacingM, this.timeS);
+    this.swarm = makeSwarm(config.nodes, config.spacingM, this.timeS, this.designs);
     this.lastCmds = [];
     this.lastTracked = {};
     this.sinceDecide = Infinity;
@@ -49,7 +50,7 @@ export class Sim {
     while (left > 1e-9) {
       const dt = Math.min(MAX_STEP_S, left);
       if (this.sinceDecide >= DECIDE_EVERY_S) this.decide();
-      const r = stepSwarm(this.swarm, this.lastCmds, dt, { sky: this.sky, currentMs: [this.config.currentEastMs, this.config.currentNorthMs] as Vec2 }, this.config.maxSpeedMs, this.timeS);
+      const r = stepSwarm(this.swarm, this.lastCmds, dt, { sky: this.sky, currentMs: [this.config.currentEastMs, this.config.currentNorthMs] as Vec2, designs: this.designs }, this.config.maxSpeedMs, this.timeS);
       this.swarm = r.swarm;
       this.timeS += dt;
       this.sinceDecide += dt;

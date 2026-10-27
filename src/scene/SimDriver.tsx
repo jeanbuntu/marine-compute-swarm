@@ -6,11 +6,13 @@ import { sim } from '../state/sim';
 /** Advances the simulation each frame and mirrors the clock into the store a few times a second. */
 export function SimDriver() {
   const config = useStore((s) => s.config);
+  const designs = useStore((s) => s.designs);
   const sinceSync = useRef(0);
 
   useEffect(() => {
+    sim.designs = designs;
     sim.rebuild(config);
-  }, [config]);
+  }, [config, designs]);
 
   useFrame((_, dt) => {
     const { playing, speed, setTime } = useStore.getState();

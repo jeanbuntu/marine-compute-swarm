@@ -31,16 +31,18 @@ export function hexSlots(n: number, spacingM: number): Vec2[] {
   return axial.slice(0, n).map(([q, r]) => [spacingM * (q + r / 2), spacingM * ((Math.sqrt(3) / 2) * r)] as Vec2);
 }
 
-export function makeSwarm(n: number, spacingM: number, t = 0): Swarm {
+export type Designs = Record<'worker' | 'master', NodeDesign>;
+
+export function makeSwarm(n: number, spacingM: number, t = 0, designs: Designs = DESIGNS): Swarm {
   const slots = hexSlots(Math.max(1, n), spacingM);
   const nodes: NodeState[] = slots.map((p, i) => {
     const role = i === 0 ? 'master' : 'worker';
-    return { id: `n${i}`, role, pos: [...p] as Vec2, vel: [0, 0], socWh: 0.6 * batteryCapacityWh(DESIGNS[role]) };
+    return { id: `n${i}`, role, pos: [...p] as Vec2, vel: [0, 0], socWh: 0.6 * batteryCapacityWh(designs[role]) };
   });
   return { t, nodes, slots };
 }
 
-export interface StepEnv { sky: Sky; currentMs: Vec2 }
+export interface StepEnv { sky: Sky; currentMs: Vec2; designs?: Designs }
 export interface StepResult { swarm: Swarm; thrustW: Record<string, number>; pvW: Record<string, number>; loadW: Record<string, number> }
 
 /** Commands are desired ground velocities; the node thrusts against the current to achieve them. */
@@ -55,7 +57,7 @@ export function stepSwarm(s: Swarm, cmds: Command[], dtS: number, env: StepEnv, 
     const sp = Math.hypot(wx, wy);
     if (sp > maxSpeedMs) { wx *= maxSpeedMs / sp; wy *= maxSpeedMs / sp; }
     const speed = Math.hypot(wx, wy);
-    const d = DESIGNS[n.role];
+    const d = (env.designs ?? DESIGNS)[n.role];
     const thrust = thrustPowerW(speed);
     const pv = pvPowerW(d, ghi, env.sky.shadowFactor(t, n.pos[0], n.pos[1]));
     const load = loadW(d, thrust);

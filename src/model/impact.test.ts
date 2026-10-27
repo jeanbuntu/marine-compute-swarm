@@ -1,5 +1,6 @@
 import { runScenario, scaleUp } from './impact';
 import { defaultConfig } from './config';
+import { workerDesign, masterDesign } from './nodeDesign';
 
 const cfg = (o = {}) => ({ ...defaultConfig(), nodes: 7, ...o });
 
@@ -32,5 +33,13 @@ describe('impact', () => {
   test('zero stay-put energy gives zero gain', () => {
     const r = runScenario(cfg({ coverage: 0 }), 0.01, 0);
     expect(r.gainPct).toBe(0);
+  });
+
+  test('edited hardware changes the result: longer petals harvest more', () => {
+    const base = { worker: workerDesign(), master: masterDesign() };
+    const longer = { worker: { ...base.worker, petalLengthM: 1.6 }, master: { ...base.master, petalLengthM: 1.6 } };
+    const a = runScenario(cfg({ coverage: 0 }), 6, 8, base).swarm.energyKwh;
+    const b = runScenario(cfg({ coverage: 0 }), 6, 8, longer).swarm.energyKwh;
+    expect(b).toBeGreaterThan(a * 1.1);
   });
 });

@@ -1,5 +1,7 @@
 import { makeSky } from './sky';
-import { makeSwarm, stepSwarm, type Swarm, type Vec2 } from './swarm';
+import { makeSwarm, stepSwarm, type Designs, type Swarm, type Vec2 } from './swarm';
+import { masterDesign, workerDesign } from './nodeDesign';
+import type { NodeDesign } from './parts';
 import { holdStationNavigator, scriptedNavigator, type Command, type Navigator } from './navigator';
 import { simulatedTracker, type SkyFrame, type TrackedCloud } from './tracker';
 import type { ScenarioConfig } from './config';
@@ -8,15 +10,17 @@ export interface Impact { energyKwh: number; computeTflopH: number; revenueUsd: 
 export interface Comparison { swarm: Impact; stayPut: Impact; gainPct: number }
 
 const TFLOPS_PER_W = 1.68; // EST: data-center inference GPU, dense FP16, per electrical watt
-const COMPUTE_CAP_W = { worker: 280, master: 430 }; // compute pod power budgets from the design
-const BASE_LOAD_W = { worker: 84, master: 160 }; // non-compute, non-propulsion loads, approx from the design
+/** Compute pod power budget: the sum of compute parts in the design. */
+const computeCapW = (d: NodeDesign) => d.parts.filter((p) => p.subsystem === 'compute').reduce((s, p) => s + p.powerW, 0);
+/** Fixed loads that are neither compute nor propulsion. */
+const baseLoadW = (d: NodeDesign) => d.parts.filter((p) => p.subsystem !== 'compute' && p.subsystem !== 'propulsion').reduce((s, p) => s + p.powerW, 0);
 const DT_S = 30;
 
-function simulate(c: ScenarioConfig, hours: number, startHour: number, nav: Navigator): Impact {
+function simulate(c: ScenarioConfig, hours: number, startHour: number, nav: Navigator, designs: Designs): Impact {
   const sky = makeSky({ seed: c.seed, coverage: c.coverage, windMs: [c.windEastMs, c.windNorthMs], latDeg: c.latDeg, lonDeg: c.lonDeg });
   const tracker = simulatedTracker(sky, { noiseM: c.trackerNoiseM, dropRate: c.trackerDropRate, seed: c.seed });
-  const env = { sky, currentMs: [c.currentEastMs, c.currentNorthMs] as Vec2 };
-  let swarm: Swarm = makeSwarm(c.nodes, c.spacingM, startHour * 3600);
+  const env = { sky, currentMs: [c.currentEastMs, c.currentNorthMs] as Vec2, designs };
+  let swarm: Swarm = makeSwarm(c.nodes, c.spacingM, startHour * 3600, designs);
   let harvestedWh = 0, computeWh = 0;
   let cmds: Command[] = [];
   const steps = Math.max(0, Math.round((hours * 3600) / DT_S));
@@ -33,8 +37,8 @@ function simulate(c: ScenarioConfig, hours: number, startHour: number, nav: Navi
     });
     const r = stepSwarm(swarm, cmds, DT_S, env, c.maxSpeedMs);
     for (const n of swarm.nodes) {
-      const surplus = Math.max(0, r.pvW[n.id] - BASE_LOAD_W[n.role] - r.thrustW[n.id]);
-      computeWh += (Math.min(surplus, COMPUTE_CAP_W[n.role]) * DT_S) / 3600;
+      const surplus = Math.max(0, r.pvW[n.id] - baseLoadW(designs[n.role]) - r.thrustW[n.id]);
+      computeWh += (Math.min(surplus, computeCapW(designs[n.role])) * DT_S) / 3600;
       harvestedWh += (r.pvW[n.id] * DT_S) / 3600;
     }
     swarm = r.swarm;
@@ -48,9 +52,9 @@ function simulate(c: ScenarioConfig, hours: number, startHour: number, nav: Navi
 }
 
 /** Compares the cloud-dodging swarm with one that only holds station, under the same weather. */
-export function runScenario(c: ScenarioConfig, hours: number, startHour = 6): Comparison {
-  const swarm = simulate(c, hours, startHour, scriptedNavigator());
-  const stayPut = simulate(c, hours, startHour, holdStationNavigator());
+export function runScenario(c: ScenarioConfig, hours: number, startHour = 6, designs: Designs = { worker: workerDesign(), master: masterDesign() }): Comparison {
+  const swarm = simulate(c, hours, startHour, scriptedNavigator(), designs);
+  const stayPut = simulate(c, hours, startHour, holdStationNavigator(), designs);
   const gainPct = stayPut.energyKwh > 0 ? ((swarm.energyKwh - stayPut.energyKwh) / stayPut.energyKwh) * 100 : 0;
   return { swarm, stayPut, gainPct };
 }

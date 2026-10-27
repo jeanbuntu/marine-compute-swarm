@@ -2,20 +2,18 @@ import { useMemo } from 'react';
 import { useStore } from '../state/store';
 import { evaluate, evaluateWorst } from '../model/hydrostatics';
 import type { Subsystem } from '../model/parts';
-import type { Edit } from '../model/solver';
-import { acceptRecommendation, editingRole } from '../state/editor';
+import { editingRole } from '../state/editor';
+import { OutcomeBanner } from './OutcomeBanner';
 import { PartEditor } from './PartEditor';
 
 const ORDER: Subsystem[] = ['hull', 'power', 'compute', 'cooling', 'propulsion', 'navigation', 'comms', 'camera', 'petals'];
-const editLabel = (e: Edit) => ('knob' in e ? e.knob : `${e.partId} ${e.field}`);
 const f = (n: number, d = 2) => Number(n.toFixed(d)).toString();
 
 export function ExplodedPanel() {
   const nodeId = useStore((s) => s.explodedNodeId);
   const designs = useStore((s) => s.designs);
   const selectedPartId = useStore((s) => s.selectedPartId);
-  const outcome = useStore((s) => s.lastOutcome);
-  const { explode, selectPart, dismissOutcome } = useStore.getState();
+  const { explode, selectPart } = useStore.getState();
 
   const role = nodeId ? editingRole() : 'worker';
   const design = designs[role];
@@ -45,23 +43,7 @@ export function ExplodedPanel() {
         <span>Heel <b>{f(worst.heelDeg, 1)}°</b></span>
       </div>
 
-      {outcome && outcome.outcome.status !== 'ok' && (
-        <div className="banner" role="alert">
-          <b>{outcome.outcome.message}</b>
-          {outcome.outcome.status === 'recommend' && (
-            <>
-              <ul style={{ margin: '6px 0', paddingLeft: 18 }}>
-                {outcome.outcome.changes.map((c, i) => <li key={i}>{editLabel(c)} → {f(c.value)}</li>)}
-              </ul>
-              <div className="row">
-                <button className="primary" onClick={acceptRecommendation}>Apply all</button>
-                <button onClick={dismissOutcome}>Dismiss</button>
-              </div>
-            </>
-          )}
-          {outcome.outcome.status === 'infeasible' && <div className="row" style={{ marginTop: 6 }}><button onClick={dismissOutcome}>Dismiss</button></div>}
-        </div>
-      )}
+      <OutcomeBanner />
 
       {part && (
         <>
