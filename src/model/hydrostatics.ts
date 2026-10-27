@@ -16,12 +16,13 @@ export interface HydroResult {
 }
 
 // Acceptance thresholds (see design doc section 5).
+export const PETAL_TILT_DEG = 20;
 export const MIN_RESERVE = 0.5;
 export const MIN_GM_M = 0.15;
 export const MAX_HEEL_DEG = 10;
 
 const KEEL_WIDTH_RATIO = 0.6;
-const PETAL_TILT_RAD = (20 * Math.PI) / 180; // deployed petals tilt toward the sun
+const PETAL_TILT_RAD = (PETAL_TILT_DEG * Math.PI) / 180; // deployed petals tilt toward the sun
 const WIND_STOWED_MS = 25; // gale, petals stowed
 const WIND_DEPLOYED_MS = 12; // stow threshold, petals deployed
 const CD_WIND = 1.2;
@@ -29,7 +30,7 @@ const CD_WIND = 1.2;
 const isPetal = (p: Part) => p.id.startsWith('petal-');
 
 /** Part position for the given petal state; deployed petals swing out and tilt up. */
-function posFor(d: NodeDesign, p: Part, state: PetalState): [number, number, number] {
+export function partPosition(d: NodeDesign, p: Part, state: PetalState): [number, number, number] {
   if (!isPetal(p) || state === 'stowed') return p.pos;
   const [x, y, z] = p.pos;
   const r = Math.hypot(x, z) || 1;
@@ -68,7 +69,7 @@ export function evaluate(d: NodeDesign, petals: PetalState, windMs?: number): Hy
   const bm = wp ** 4 / 12 / volume;
 
   // Center of gravity for the chosen petal state.
-  const kg = d.parts.reduce((s, p) => s + p.massKg * posFor(d, p, petals)[1], 0) / m;
+  const kg = d.parts.reduce((s, p) => s + p.massKg * partPosition(d, p, petals)[1], 0) / m;
   const gm = kb + bm - kg;
 
   const watertightV = keelV + side * side * d.hullDepthM;
