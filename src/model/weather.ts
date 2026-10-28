@@ -1,3 +1,4 @@
+import { advanceRighting, initialRighting, weatherSun, type RightingState } from './weatherRecovery';
 import type { Designs } from './swarm';
 import { batteryCapacityWh, hexSlots, thrustPowerW } from './swarm';
 import { DISTRESS, planRescue, type PositionReport, type RescuePlan } from './weatherRescue';
@@ -12,27 +13,28 @@ export interface Scenario { id: ScenarioId; name: string; subtitle: string; ques
 const base: Conditions = { wind: 3, swell: 0.4, period: 8, rain: 0, current: 0.08, direction: 90, tide: 0.1, range: 250, speed: 0.4 };
 export const SCENARIOS: Scenario[] = [
   { id: 'day', name: 'Day', subtitle: 'The reference run', question: 'Can the fleet hold formation without spending its solar budget?', rationale: 'Start with mild conditions. Compare station keeping, battery trend and relay paths before adding a failure.', conditions: { ...base } },
-  { id: 'night', name: 'Night', subtitle: 'No solar safety net', question: 'What stays powered when the sun disappears?', rationale: 'PV is zero. Shed compute below 25% battery; preserve navigation and communications. Below 10%, idle propulsion and report distress. Preserve essentials, charge from solar when available, and resume movement above 15%; request retrieval if recovery is not feasible.', conditions: { ...base, wind: 5, current: 0.18 } },
+  { id: 'night', name: 'Night', subtitle: 'No solar safety net', question: 'What stays powered when the sun disappears?', rationale: 'Starts at sunset and advances through sunrise. Shed compute below 25% battery; preserve navigation and communications. Below 10%, idle propulsion and report distress. Preserve essentials, charge from solar when available, and resume movement at 25%; request retrieval if recovery is not feasible.', conditions: { ...base } },
   { id: 'wind', name: 'Heavy winds', subtitle: 'Windage & separation', question: 'Does a gust push a worker beyond the last relay?', rationale: 'A simple wind-slip estimate adds drift. Request panel stow at 12 m/s; this reduces modeled PV and windage, but is not a validated folding sequence.', conditions: { ...base, wind: 22, swell: 1.5, current: 0.2 } },
   { id: 'storm', name: 'Storm', subtitle: 'Rain, spray & link loss', question: 'What survives when power, visibility and radio margin fall together?', rationale: 'Rain reduces solar input; spray and wave masking reduce the assumed radio radius. Ingress is injected separately: rainfall alone does not prove a sealed hull leaks.', conditions: { ...base, wind: 28, swell: 3.5, period: 7, rain: 45, current: 0.45 } },
-  { id: 'swells', name: 'High swells', subtitle: 'Motion & capsize drills', question: 'Can a node report its position after it turns upside down?', rationale: 'Roll is a visual wave-following estimate, not a capsize predictor. Inject a full inversion to rehearse shutdown and retrieval; automatic self-righting is not assumed.', conditions: { ...base, wind: 9, swell: 5, period: 11, current: 0.25 } },
+  { id: 'swells', name: 'High swells', subtitle: 'Motion & capsize drills', question: 'Can a node report its position after it turns upside down?', rationale: 'Roll is a visual wave-following estimate, not a capsize predictor. Inject a full inversion to rehearse shutdown and retrieval; the proposed 60 s automatic righting state machine runs directly on the fleet map. Its successful roll is a conditional design assumption, not a wave-basin result.', conditions: { ...base, wind: 9, swell: 5, period: 11, current: 0.25 } },
   { id: 'tides', name: 'Tides', subtitle: 'Reversing tidal stream', question: 'Can it return before the tidal stream outruns its thrusters?', rationale: 'Water level and horizontal tidal flow are separate. A 12.42-hour sinusoid changes level and current; this is a conceptual tide, not a local forecast or grounding model.', conditions: { ...base, current: 0.1, tide: 0.7, swell: 0.6 } },
   { id: 'current', name: 'Current', subtitle: 'Beyond propulsion authority', question: 'What happens when the water moves faster than the node?', rationale: 'Ground velocity equals through-water propulsion plus current and estimated wind slip. When return makes no headway, stop promising recovery and request retrieval.', conditions: { ...base, current: 0.75, tide: 0.15, swell: 1 } },
 ];
-export type Mode = 'Holding' | 'Drifting' | 'Link grace' | 'Returning' | 'Retrieval' | 'Inverted' | 'Wildlife hold' | 'Power reserve' | 'Relay escort' | 'Offline';
+export type Mode = 'Holding' | 'Drifting' | 'Link grace' | 'Returning' | 'Retrieval' | 'Inverted' | 'Wildlife hold' | 'Power reserve' | 'Relay escort' | 'Self-righting' | 'Recovery escort' | 'Offline';
 export interface WeatherNode {
   id: string; role: 'master' | 'worker'; x: number; y: number; homeX: number; homeY: number;
+  righting: RightingState;
   reserveHold: boolean; beaconWh: number; beaconWaitS: number; lastSatelliteS: number | null;
   beaconStatus: 'Standby' | 'Mesh report' | 'Acquiring' | 'Satellite ACK' | 'Sky blocked' | 'Channel unavailable' | 'Reserve empty';
   report: PositionReport | null;
   wh: number; lostS: number; inverted: boolean; ingress: boolean; mode: Mode; pvW: number; loadW: number;
 }
-export interface WeatherState { satelliteAvailable: boolean; skyView: boolean; rescue: RescuePlan | null; t: number; nodes: WeatherNode[]; masterOnline: boolean; wildlife: boolean; events: { t: number; message: string }[] }
+export interface WeatherState { rightingOperational: boolean; recoveryFormation: 'escort'|'fleet'; satelliteAvailable: boolean; skyView: boolean; rescue: RescuePlan | null; t: number; nodes: WeatherNode[]; masterOnline: boolean; wildlife: boolean; events: { t: number; message: string }[] }
 export const logEvent = (s: WeatherState, message: string): WeatherState => ({ ...s, events: [{ t: s.t, message }, ...s.events].slice(0, 40) });
 export function createWeather(designs: Designs): WeatherState {
-  return { satelliteAvailable: true, skyView: true, rescue: null, t: 0, masterOnline: true, wildlife: false, events: [], nodes: hexSlots(13, 100).map(([x, y], i) => {
+  return { rightingOperational: true, recoveryFormation: 'escort', satelliteAvailable: true, skyView: true, rescue: null, t: 0, masterOnline: true, wildlife: false, events: [], nodes: hexSlots(13, 100).map(([x, y], i) => {
     const role = i === 0 ? 'master' : 'worker';
-    return { reserveHold: false, beaconWh: DISTRESS.capacityWh, beaconWaitS: 0, lastSatelliteS: null, beaconStatus: 'Standby', report: { x, y, t: 0, source: 'mesh', batteryPct:60, fault:'Healthy' }, id: i === 0 ? 'M' : `W${String(i).padStart(2, '0')}`, role, x, y, homeX: x, homeY: y, wh: batteryCapacityWh(designs[role]) * 0.6, lostS: 0, inverted: false, ingress: false, mode: 'Holding', pvW: 0, loadW: 0 };
+    return { righting: initialRighting(), reserveHold: false, beaconWh: DISTRESS.capacityWh, beaconWaitS: 0, lastSatelliteS: null, beaconStatus: 'Standby', report: { x, y, t: 0, source: 'mesh', batteryPct:60, fault:'Healthy' }, id: i === 0 ? 'M' : `W${String(i).padStart(2, '0')}`, role, x, y, homeX: x, homeY: y, wh: batteryCapacityWh(designs[role]) * 0.6, lostS: 0, inverted: false, ingress: false, mode: 'Holding', pvW: 0, loadW: 0 };
   }) };
 }
 export function environment(c: Conditions, t: number) {
@@ -60,12 +62,18 @@ export function network(s: WeatherState, range: number): { connected: Set<string
 export function stepWeather(state: WeatherState, c: Conditions, scenario: ScenarioId, dt: number, designs: Designs): WeatherState {
   let s = state;
   for (let elapsed = 0; elapsed < Math.max(dt, 1); elapsed += 1) {
-    const h = Math.min(1, dt - elapsed), env = environment(c, s.t), net = network(s, env.range);
-    const reported = s.nodes.map(n => {
+    const h = Math.min(1, dt - elapsed), env = environment(c, s.t);
+    const righted=s.nodes.map(n=>{
+      const result=advanceRighting(n.righting,n.inverted,n.ingress,s.rightingOperational,n.wh>0||n.beaconWh>=.1,h,designs[n.role]);
+      return {...n,righting:result.state,inverted:result.inverted,wh:Math.max(0,n.wh-(result.fire&&n.wh>0?.1:0)),beaconWh:Math.max(0,n.beaconWh-(result.fire&&n.wh<=0?.1:0))};
+    });
+    const net=network({...s,nodes:righted},env.range);
+    const sunlight=weatherSun(s.t,scenario);
+    const reported = righted.map(n => {
       const linked = net.connected.has(n.id);
       const soc = n.wh / batteryCapacityWh(designs[n.role]);
-      const reserveHold = soc < .1 || (n.reserveHold && soc < .15);
-      const payload={batteryPct:soc*100,fault:n.ingress?'Ingress':n.inverted?'Inverted':soc<.1?'Low battery':linked?'Healthy':'Link lost'};
+      const reserveHold = soc < .1 || (n.reserveHold && soc < .25);
+      const payload={batteryPct:soc*100,fault:n.ingress?'Ingress':n.inverted?'Inverted':reserveHold?'Low battery':linked?'Healthy':'Link lost'};
       let report = linked ? { x: n.x, y: n.y, t: s.t, source: 'mesh' as const, ...payload } : n.report;
       let beaconWh = Math.max(0,n.beaconWh-DISTRESS.standbyW*h/3600);
       const beaconWaitS = linked ? 0 : n.beaconWaitS+h;
@@ -96,10 +104,13 @@ export function stepWeather(state: WeatherState, c: Conditions, scenario: Scenar
       const relay = rescue?.waypoints.find(w=>w.id===n.id);
       let goalX=n.homeX, goalY=n.homeY;
       if (relay) {
-        const anchor=reported.find(p=>p.id===relay.anchorId)!;
-        const dx=relay.x-anchor.x,dy=relay.y-anchor.y,dist=Math.hypot(dx,dy);
-        const scale=Math.min(1,env.range*.7/Math.max(dist,1e-6));
-        goalX=anchor.x+dx*scale; goalY=anchor.y+dy*scale;
+        goalX=relay.x;goalY=relay.y;
+        if(n.role!=='master') {
+          const anchor=reported.find(p=>p.id===relay.anchorId)!;
+          const ax=relay.x-anchor.x,ay=relay.y-anchor.y,dist=Math.hypot(ax,ay);
+          const scale=Math.min(1,env.range*.7/Math.max(dist,1e-6));
+          goalX=anchor.x+ax*scale;goalY=anchor.y+ay*scale;
+        }
       }
       const dx = goalX - n.x, dy = goalY - n.y, distance = Math.hypot(dx, dy);
       const vx = distance > 2 ? dx / distance * Math.min(c.speed, distance / 20) : 0;
@@ -111,23 +122,25 @@ export function stepWeather(state: WeatherState, c: Conditions, scenario: Scenar
       let mode: Mode = isolated ? 'Returning' : net.connected.has(n.id) ? 'Holding' : 'Link grace';
       if (!isolated && net.connected.has(n.id) && need > c.speed && distance > 2 && headway <= 0.01) mode = 'Drifting';
       if (isolated && distance > 2 && headway <= 0.01) mode = 'Retrieval';
-      if (relay) mode = 'Relay escort';
+      if (relay) mode = relay.kind==='ring'||relay.kind==='fleet'?'Recovery escort':'Relay escort';
       if (n.reserveHold) mode = 'Power reserve';
       if (s.wildlife) mode = 'Wildlife hold';
-      if (n.inverted) mode = 'Inverted';
+      if (n.inverted) mode = n.righting.phase==='Failed'?'Inverted':'Self-righting';
       if (n.ingress || n.wh <= 0 || (n.role === 'master' && !s.masterOnline)) mode = 'Offline';
-      const stopped = ['Power reserve', 'Wildlife hold', 'Inverted', 'Offline'].includes(mode);
+      const stopped = ['Power reserve', 'Wildlife hold', 'Inverted', 'Self-righting', 'Offline'].includes(mode);
       if (stopped) { tx = 0; ty = 0; }
-      const pv = scenario === 'night' || n.inverted || mode === 'Offline' ? 0 : pvPowerW(d, 850, Math.max(0.05, 1 - c.rain / 60)) * (env.stowed ? 0.2 : 1);
+      const pv = n.inverted || mode === 'Offline' ? 0 : pvPowerW(d, sunlight.ghi, Math.max(0.05, 1 - c.rain / 60)) * (env.stowed ? 0.2 : 1);
       const computeW = d.parts.filter(p => p.subsystem === 'compute').reduce((v, p) => v + p.powerW, 0);
       const essentialW=d.parts.filter(p=>p.subsystem==='navigation' || ['mesh-radio','bms'].includes(p.id)).reduce((sum,p)=>sum+p.powerW,0);
-      const load = mode === 'Offline' ? 0 : n.inverted ? 15 : mode === 'Power reserve' ? essentialW : loadW(d, thrustPowerW(Math.hypot(tx, ty))) - (soc < 0.25 || s.wildlife || relay ? computeW : 0);
+      const load = mode === 'Offline' ? 0 : n.inverted ? 15 : n.reserveHold ? essentialW : loadW(d, thrustPowerW(Math.hypot(tx, ty))) - (soc < 0.25 || s.wildlife || relay ? computeW : 0);
       const wh = stepBattery(n.wh, capacity, pv - load, h);
       return { ...n, x: n.x + (tx + env.vx) * h, y: n.y + (ty + env.vy) * h, lostS, mode, wh, pvW: mode === 'Offline' ? 0 : pv, loadW: load };
     });
     let next: WeatherState = { ...s, t: s.t + h, nodes, rescue };
     for(const n of nodes) {
       const previous=s.nodes.find(p=>p.id===n.id)!;
+      if(n.righting.phase!==previous.righting.phase) next=logEvent(next,`${n.id}: righting ${n.righting.phase}${n.righting.phase==='Upright'?' — upright confirmed; bag remains deployed, service required':''}`);
+      if(n.reserveHold!==previous.reserveHold) next=logEvent(next,`${n.id}: ${n.reserveHold?'survival power; escort requested':'25% charge reached; independent operation restored'}`);
       if(n.lastSatelliteS!==previous.lastSatelliteS) next=logEvent(next,`${n.id}: simulated satellite ACK — position + battery + fault to shore, independent of master`);
     }
     const rescueKey=(r: RescuePlan|null)=>r?`${r.targetId}:${r.status}:${r.relayIds.join(',')}`:'';

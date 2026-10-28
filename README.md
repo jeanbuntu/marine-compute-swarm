@@ -85,7 +85,7 @@ Collecting area includes the narrower outline, cell inset and rounded corner cut
 
 Open `?view=weather` (also linked from Swarm and Unit bench) for seven weather rehearsal tabs: Day, Night, Heavy winds, Storm, High swells, Tides and Current. Drag a node out of formation, inspect mesh relay reachability and battery balance, or inject capsize, wildlife impact, ingress, low battery and coordinator loss. Conditions are editable; switching tabs resets the fleet and conditions, while Reset fleet preserves edited conditions.
 
-The page explores a proposed recovery policy: mesh retries, autonomous return to cached formation slots, compute shedding at 25% battery, propulsion reserve at 10%, and physical retrieval when inverted or unable to make headway. Wildlife hold idles fleet propulsion. The nominal 250 m radio radius and weather penalties are assumptions to test. Motion, illustrative wave roll and injected damage do not validate open-ocean survivability or self-righting. Read “Recovery & design rationale” on the page for hardware tradeoffs and unmodeled hazards.
+The page explores a proposed recovery policy: mesh retries, autonomous return to cached formation slots, compute shedding at 25% battery, survival mode below 10% through recharge to 25%, and physical retrieval if righting fails or return cannot make headway. Wildlife hold idles fleet propulsion. The nominal 250 m radio radius and weather penalties are assumptions to test. Motion, illustrative wave roll and injected damage do not validate open-ocean survivability or self-righting. Read “Recovery & design rationale” on the page for hardware tradeoffs and unmodeled hazards.
 
 ### Recovery hardware concept and 3D close-ups
 
@@ -98,13 +98,22 @@ This is a mechanism demonstration with prescribed poses, not proof of self-right
 
 ### Low-power and lost-link recovery drills
 
-Weather Simulator now includes an explicit recovery coordinator. At 8% main battery it keeps navigation/mesh essentials alive and idles compute and propulsion; solar can recharge the node, with propulsion held until above 15%. A proposed separate GNSS + low-rate satellite modem can report position, battery and fault using an assumed 20 Wh reserve, including when main power fails. GPS determines position; the satellite modem transmits it independently of the master’s Starlink.
+Weather Simulator now includes an explicit recovery coordinator. At 8% main battery it keeps navigation/mesh essentials alive and idles compute and propulsion; solar can recharge the node, with survival loads held until 25%. A proposed separate GNSS + low-rate satellite modem can report position, battery and fault using an assumed 20 Wh reserve, including when main power fails. GPS determines position; the satellite modem transmits it independently of the master’s Starlink.
 
 Simulated delivery assumes 60 s acquisition, 5-minute updates and 0.2 Wh per packet; these are test settings, not provider guarantees. Disable the satellite test channel or antenna sky view to rehearse failures. Inversion blocks delivery. The UI distinguishes current truth positions from received fixes and their age.
 
-When conditions permit, at most three healthy connected workers (35% minimum charge) form a bounded relay chain toward the reported fix, retaining maneuver and battery margin. Unsafe drift, a stale or distant fix, lost coordination, wildlife, insufficient escorts or physical damage leads to retrieval instead. Escorts cannot tow or recharge a stranded node. There is no live satellite service, and a shore distress report does not restore compute backhaul.
+When conditions permit, up to three healthy connected workers (35% minimum charge) form relay bridges alongside a low-power escort ring toward the reported fix, retaining maneuver and battery margin. Unsafe drift, a stale or distant fix, lost coordination, wildlife, insufficient escorts or physical damage leads to retrieval instead. Escorts cannot tow or recharge a stranded node. There is no live satellite service, and a shore distress report does not restore compute backhaul.
 
 
 ### Site navigation
 
 The main landing page is [Marine Compute Swarm](https://marine-compute-swarm.vercel.app/). Use the three-line **Menu** button in the top title bar to open Swarm, Master Unit Bench, Worker Unit Bench, Weather Simulator, Master Recovery Close-up or Worker Recovery Close-up. The title bar identifies your current page and stays available throughout the site. The earlier `solar-swarm.vercel.app` address is retained as a compatibility redirect.
+
+
+### Autonomous recovery on the fleet map
+
+Capsize now triggers the proposed 60-second onboard righting sequence in the live 2D simulation. The node isolates propulsion, inflates its one-shot bag, rolls upright and verifies orientation. The map and optional live 3D close-up use the same state. Failed inflation, water ingress, exhausted control power or a spent gas charge still requires retrieval. Timing and successful roll remain conditional design assumptions, not physical validation.
+
+At 8%, the survivor idles nonessential loads while three healthy neighbors form an escort ring; the coordinator and remaining fleet accompany its drift. You can instead select Whole-fleet ring. The fleet waits through the daily sunrise and releases the survivor after 25% charge. The formation provides positioning and communications, without claiming to immobilize a powerless node or block currents and waves. Use 3600× playback to review a night-to-morning recovery.
+
+The 2D map always fits every node automatically. Its world-aligned grid and scale bar show changes in zoom and pan; manual Fit fleet and extent controls are removed.

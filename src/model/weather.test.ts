@@ -30,8 +30,8 @@ test('opposing current faster than propulsion causes a retrieval alert', () => {
   expect(next.nodes[1].mode).toBe('Retrieval');
   expect(next.nodes[1].x).toBeGreaterThan(1000);
 });
-test('inversion cannot self-right, generate PV or propel', () => {
-  const s = createWeather(designs); s.nodes[1].inverted = true; s.nodes[1].x = 1000;
+test('failed righting cannot generate PV or propel', () => {
+  const s = createWeather(designs); s.rightingOperational=false; s.nodes[1].inverted = true; s.nodes[1].x = 1000;
   const next = stepWeather(s, conditions, 'swells', 60, designs);
   expect(next.nodes[1].mode).toBe('Inverted');
   expect(next.nodes[1].inverted).toBe(true);
@@ -93,6 +93,6 @@ test('paused failure refresh updates status and telemetry without advancing time
   expect(next.t).toBe(0);
   expect(next.nodes[1].x).toBe(s.nodes[1].x);
   expect(next.nodes[1].wh).toBe(s.nodes[1].wh);
-  expect(next.nodes[1].mode).toBe('Inverted');
+  expect(next.nodes[1].mode).toBe('Self-righting');
   expect(next.nodes[1].pvW).toBe(0);
 });

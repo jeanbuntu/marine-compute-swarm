@@ -9,8 +9,8 @@ test('low-battery recovery and satellite failure controls are visible',()=>{
   const state=stepWeather(initial,SCENARIOS[0].conditions,'night',0,designs);
   const toggle=vi.fn();
   render(<FleetRecovery state={state} node={state.nodes[1]} onToggle={toggle} />);
-  expect(screen.getByText('Maintain contact')).toBeInTheDocument();
-  expect(screen.getByText('Essentials only · propulsion resumes above 15%')).toBeInTheDocument();
+  expect(screen.getByText('Form escort ring')).toBeInTheDocument();
+  expect(screen.getByText('Essentials only · independent operation at 25%')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('checkbox',{name:'Satellite test channel available'}));
   expect(toggle).toHaveBeenCalledWith('satelliteAvailable');
   fireEvent.click(screen.getByRole('checkbox',{name:'Satellite antenna has sky view'}));

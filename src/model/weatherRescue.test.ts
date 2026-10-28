@@ -6,7 +6,7 @@ const designs={master:masterDesign(),worker:workerDesign()};
 const calm={...SCENARIOS[0].conditions,current:0,tide:0,wind:0,swell:0};
 const capacity=batteryCapacityWh(designs.worker);
 
-test('8% reserve sheds to essentials and uses 15% hysteresis before propulsion restarts',()=>{
+test('8% reserve sheds to essentials and uses 25% recovery reserve before propulsion restarts',()=>{
   let s=createWeather(designs); s.nodes[1].wh=capacity*.08; s.nodes[1].x=550;
   s=stepWeather(s,calm,'night',1,designs);
   expect(s.nodes[1].mode).toBe('Power reserve');
@@ -15,7 +15,7 @@ test('8% reserve sheds to essentials and uses 15% hysteresis before propulsion r
   s.nodes[1].wh=capacity*.12;
   s=stepWeather(s,calm,'night',1,designs);
   expect(s.nodes[1].mode).toBe('Power reserve');
-  s.nodes[1].wh=capacity*.16;
+  s.nodes[1].wh=capacity*.26;
   s=stepWeather(s,calm,'night',1,designs);
   expect(s.nodes[1].reserveHold).toBe(false);
   expect(s.nodes[1].x).toBeLessThan(550);
@@ -36,7 +36,7 @@ test.each(['channel','sky','inversion','reserve'] as const)('%s failure prevents
   let s=createWeather(designs);const cachedX=s.nodes[1].report!.x;s.nodes[1].wh=0;s.nodes[1].x=550;
   if(failure==='channel')s.satelliteAvailable=false;
   if(failure==='sky')s.skyView=false;
-  if(failure==='inversion')s.nodes[1].inverted=true;
+  if(failure==='inversion'){s.nodes[1].inverted=true;s.rightingOperational=false;}
   if(failure==='reserve')s.nodes[1].beaconWh=.01;
   s=stepWeather(s,calm,'night',120,designs);
   expect(s.nodes[1].report?.source).toBe('mesh');
@@ -50,14 +50,15 @@ test('no chase uses an unreported displaced position; a received satellite fix e
   expect(s.rescue?.report?.x).toBe(cachedX);
   expect(s.rescue?.relayIds).toHaveLength(0);
   s=stepWeather(s,calm,'night',40,designs);
-  expect(s.rescue?.status).toBe('Extend relay chain');
+  expect(s.rescue?.status).toBe('Form escort ring');
   expect(s.rescue?.report?.x).toBe(550);
-  expect(s.rescue?.relayIds).toHaveLength(3);
-  const ids=s.rescue!.relayIds;
+  expect(s.rescue?.escortIds).toHaveLength(3);
+  expect(s.rescue?.relayIds.length).toBeLessThanOrEqual(3);
+  const ids=s.rescue!.escortIds;
   for(let i=0;i<24;i++){
     s=stepWeather(s,calm,'night',50,designs);
     const net=network(s,environment(calm,s.t).range);
-    expect(s.rescue?.relayIds).toEqual(ids);
+    expect(s.rescue?.escortIds).toEqual(ids);
     for(const id of ids)expect(net.connected.has(id)).toBe(true);
   }
   expect(network(s,250).connected.has(s.nodes[1].id)).toBe(true);
