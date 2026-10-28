@@ -12,7 +12,7 @@ test('first screen shows no sliders and a closed drawer', () => {
   render(<App />);
   expect(screen.queryAllByRole('slider')).toHaveLength(0);
   expect(useStore.getState().drawerOpen).toBe(false);
-  expect(screen.getByText('Solar Swarm')).toBeInTheDocument();
+  expect(screen.getByText('Marine Compute Swarm')).toBeInTheDocument();
 });
 
 test('without WebGL a message replaces the canvas and the impact numbers still render', async () => {

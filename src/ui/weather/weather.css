@@ -1,16 +1,8 @@
-.weather-app { --w-line: var(--line); --w-muted: var(--dim); min-height: 100vh; background:#050b18; color:var(--ink); font: 14px/1.5 system-ui,sans-serif; }
+.weather-app { --w-line: var(--line); --w-muted: var(--dim); min-height: 100vh; padding-top:var(--site-header-height); background:#050b18; color:var(--ink); font: 14px/1.5 system-ui,sans-serif; }
 .weather-app button, .weather-app select { border:1px solid var(--line); background:rgba(9,18,36,0.92); color:var(--ink); border-radius: 5px; padding: 7px 11px; font: inherit; cursor: pointer; }
 .weather-app button:hover { background:rgba(255,255,255,0.08); border-color:var(--line); }
 .weather-app button:focus-visible, .weather-app a:focus-visible, .weather-app select:focus-visible { outline:2px solid var(--accent); outline-offset: 3px; }
 .weather-app a { color:var(--dim); text-decoration: none; }
-.w-header { display: flex; align-items: center; gap: 45px; padding: 20px 36px; border-bottom:1px solid var(--w-line); }
-.w-brand { font-size: 12px; letter-spacing: .12em; font-weight: 700; display: flex; align-items: center; gap: 10px; color:var(--ink)!important; }
-.w-brand-mark { color:var(--dim); font-size: 30px; line-height: 1; }
-.w-header nav { display: flex; gap: 25px; font-size: 13px; }
-.w-header nav a { color:var(--w-muted); }
-.w-header nav a[aria-current] { color:var(--dim); }
-.w-prototype { margin-left: auto; font-size: 9px; letter-spacing: .1em; color:var(--w-muted); white-space: nowrap; }
-.w-prototype i { display: inline-block; width: 4px; height: 4px; background:var(--accent); border-radius: 50%; margin: 0 9px; }
 .weather-app main { max-width: 1640px; margin: auto; padding: 32px 36px 20px; }
 .w-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 26px; }
 .w-eyebrow { color:var(--dim); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; }
@@ -166,7 +158,5 @@
 .w-detail-switch>a { font-size:12px; margin-left:8px; }
 
 .weather-app a,.w-brand-mark,.w-eyebrow,.w-heading h1 span,.w-tabs button[aria-selected=true],.r-bag-label { color:var(--accent); }
-.w-header nav a { color:var(--dim); }
-.w-header nav a[aria-current] { color:var(--accent); }
 .w-response>p,.w-response li,.r-explanation>p,.w-event-log p { color:var(--dim); }
 .w-response b,.r-part-note>b { color:var(--ink); }

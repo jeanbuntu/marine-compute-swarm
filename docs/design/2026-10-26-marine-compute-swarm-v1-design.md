@@ -1,11 +1,11 @@
-# Solar Swarm V1: Design
+# Marine Compute Swarm V1: Design
 
 Date: 2026-10-26
 Status: Draft for founder review
 
 ## 1. Intent
 
-Solar Swarm is a locally served 3D simulation of a swarm of solar-powered floating compute nodes. It exists to convince an investor, and to let the founder review and refine the hardware, that the concept is a realistic engineering product with real ROI and the potential to scale across the planet.
+Marine Compute Swarm is a locally served 3D simulation of a swarm of solar-powered floating compute nodes. It exists to convince an investor, and to let the founder review and refine the hardware, that the concept is a realistic engineering product with real ROI and the potential to scale across the planet.
 
 The 3D design is the evidence. An investor should see what a node looks like, what is inside it, why each part is where it is, how the swarm sees clouds and moves away from them, and what that is worth in energy, compute revenue and carbon offset.
 

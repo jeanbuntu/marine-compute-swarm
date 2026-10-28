@@ -1,4 +1,4 @@
-# Solar Swarm V1 Implementation Plan
+# Marine Compute Swarm V1 Implementation Plan
 
 > **For implementers:** work task by task, in order. Steps use checkbox (`- [ ]`) syntax. Each task ends with a passing test run and a commit.
 
@@ -8,7 +8,7 @@
 
 **Tech Stack:** Vite, React 18, TypeScript, three, @react-three/fiber, @react-three/drei, zustand, zod, vitest, @testing-library/react.
 
-**Spec:** `docs/design/2026-10-26-solar-swarm-v1-design.md`
+**Spec:** `docs/design/2026-10-26-marine-compute-swarm-v1-design.md`
 
 ## Global Constraints
 
@@ -52,9 +52,9 @@ Tests sit next to each file as `*.test.ts(x)`.
 
 **Interfaces:** Produces `npm run dev`, `npm test` (vitest, jsdom), `npm run build`.
 
-- [ ] **Step 1:** Write `App.test.tsx`: renders `<App/>` and expects text "Solar Swarm" in the document.
+- [ ] **Step 1:** Write `App.test.tsx`: renders `<App/>` and expects text "Marine Compute Swarm" in the document.
 - [ ] **Step 2:** Run `npx vitest run` and see it fail (no App).
-- [ ] **Step 3:** Scaffold Vite React TypeScript with the dependencies listed above; `App` renders a heading "Solar Swarm".
+- [ ] **Step 3:** Scaffold Vite React TypeScript with the dependencies listed above; `App` renders a heading "Marine Compute Swarm".
 - [ ] **Step 4:** Run `npx vitest run` (pass) and `npm run build` (succeeds).
 - [ ] **Step 5:** Commit `chore: scaffold app`.
 

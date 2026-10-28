@@ -1,3 +1,4 @@
+import { SiteHeader } from '../SiteHeader';
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../../state/store';
 import { batteryCapacityWh } from '../../model/swarm';
@@ -80,11 +81,7 @@ export function WeatherApp() {
   const outside = state.nodes.filter(n => Math.abs(n.x) > radius || Math.abs(n.y) > radius);
   const netPower = node.pvW - node.loadW;
   return <div className={`weather-app weather-${scenario}`}>
-    <header className="w-header">
-      <a href="?" className="w-brand"><span className="w-brand-mark">✳</span> SOLAR SWARM</a>
-      <nav aria-label="Pages"><a href="?">Swarm</a><a href="?view=unit&role=master">Unit bench</a><a href="?view=weather" aria-current="page">Weather simulator</a></nav>
-      <span className="w-prototype">CONCEPT LAB <i /> LOCAL SIMULATION</span>
-    </header>
+    <SiteHeader page={detailOpen ? node.role === 'master' ? 'master-recovery' : 'worker-recovery' : 'weather'} />
     <main>
       <div className="w-heading"><div><div className="w-eyebrow">OCEAN RESILIENCE / FAILURE REHEARSAL</div><h1>Weather Simulator<span>.</span></h1><p>Push the conditions. Break the formation. Work out what comes next.</p></div><button onClick={() => setShowPlan(!showPlan)} aria-expanded={showPlan}>Recovery & design rationale ↗</button></div>
       <div className="w-tabs" role="tablist" aria-label="Weather scenarios" onKeyDown={e => {

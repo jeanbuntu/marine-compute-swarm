@@ -1,10 +1,12 @@
-# Solar Swarm
+# Marine Compute Swarm
+
+Previously **Solar Swarm**. The project was renamed to Marine Compute Swarm to make its ocean-based compute focus clearer; Git history retains the earlier name.
 
 **Data centers that follow the sun.** A swarm of floating, solar-powered compute nodes that watches the sky, dodges the clouds, and turns sunlight into compute across the planet.
 
 ## The idea
 
-Each node floats on the ocean, carries its own solar array, and sells the compute it runs. Sunlight is the fuel, and clouds are the main thing standing between a node and its output. Because the nodes can move, they can respond: watch the sky, decide where the clouds are going, and shift out of their way. Solar Swarm is the simulation that shows how that works and what it is worth.
+Each node floats on the ocean, carries its own solar array, and sells the compute it runs. Sunlight is the fuel, and clouds are the main thing standing between a node and its output. Because the nodes can move, they can respond: watch the sky, decide where the clouds are going, and shift out of their way. Marine Compute Swarm is the simulation that shows how that works and what it is worth.
 
 ## Run it
 
@@ -31,7 +33,7 @@ Optional starting view from the address bar: `?cam=x,y,z&target=x,y,z&explode=n0
 
 Open `?view=unit&role=master` or `?view=unit&role=worker` (or the link on the first screen) for a single unit simulated in much finer detail. The Master / Worker switch changes the actual equipment and simulation mass; `?view=master` remains a compatible master-only entry point. Use **Dimensions** to select any component and show its physical envelope in millimeters. **Focus component** pauses, opens the exploded assembly, and moves the camera to the selected item. **Explode / Assemble** works on either role. Conditions and Analysis are collapsible, with bottom panels in narrow windows. Waves move the hull and the water, and the eight petals tilt in four mechanically linked pairs to track the sun, with the angle, rate and power gain over fixed petals shown live. Pin the sun anywhere, change the sea state, wind and current, and watch the thrusters, their jets and flow particles as the node holds station or moves. A fisheye sky camera, which sees the node's own petals and mast, comes with ground truth, a simulated segmenter, tracking scores, and frame export and detection import for running SAM offline.
 
-Live at https://solar-swarm.vercel.app.
+Live at https://marine-compute-swarm.vercel.app.
 
 ## The node
 
@@ -101,3 +103,8 @@ Weather Simulator now includes an explicit recovery coordinator. At 8% main batt
 Simulated delivery assumes 60 s acquisition, 5-minute updates and 0.2 Wh per packet; these are test settings, not provider guarantees. Disable the satellite test channel or antenna sky view to rehearse failures. Inversion blocks delivery. The UI distinguishes current truth positions from received fixes and their age.
 
 When conditions permit, at most three healthy connected workers (35% minimum charge) form a bounded relay chain toward the reported fix, retaining maneuver and battery margin. Unsafe drift, a stale or distant fix, lost coordination, wildlife, insufficient escorts or physical damage leads to retrieval instead. Escorts cannot tow or recharge a stranded node. There is no live satellite service, and a shore distress report does not restore compute backhaul.
+
+
+### Site navigation
+
+The main landing page is [Marine Compute Swarm](https://marine-compute-swarm.vercel.app/). Use the three-line **Menu** button in the top title bar to open Swarm, Master Unit Bench, Worker Unit Bench, Weather Simulator, Master Recovery Close-up or Worker Recovery Close-up. The title bar identifies your current page and stays available throughout the site. The earlier `solar-swarm.vercel.app` address is retained as a compatibility redirect.

@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-Solar Swarm is a locally served 3D simulation of floating, solar-powered compute nodes that track clouds and steer away from shade. It doubles as an investor demo and a hardware design tool. See `AGENTS.md` for status, known findings and next steps, and `docs/design/` and `docs/plans/` for the approved design and plan.
+Marine Compute Swarm is a locally served 3D simulation of floating, solar-powered compute nodes that track clouds and steer away from shade. It doubles as an investor demo and a hardware design tool. See `AGENTS.md` for status, known findings and next steps, and `docs/design/` and `docs/plans/` for the approved design and plan.
 
 ## Commands
 
@@ -18,7 +18,7 @@ npx tsc --noEmit                          # type check only
 
 No linter is configured.
 
-Master node bench: `?view=master` (see `AGENTS.md` and `docs/design/2026-10-27-master-node-view-design.md`). Deploy: `npx vercel@latest deploy --prod --yes`, live at https://solar-swarm.vercel.app.
+Master node bench: `?view=master` (see `AGENTS.md` and `docs/design/2026-10-27-master-node-view-design.md`). Deploy: `npx vercel@latest deploy --prod --yes`, live at https://marine-compute-swarm.vercel.app.
 
 ## Rules that constrain changes
 

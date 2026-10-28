@@ -3,5 +3,5 @@ import { App } from './App';
 
 test('renders the product name', () => {
   render(<App />);
-  expect(screen.getByText('Solar Swarm')).toBeInTheDocument();
+  expect(screen.getByText('Marine Compute Swarm')).toBeInTheDocument();
 });

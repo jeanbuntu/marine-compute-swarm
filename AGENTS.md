@@ -1,10 +1,10 @@
 # AGENTS.md
 
-Working notes for any agent (or person) picking up Solar Swarm. Covers what the project is, how it is built, what is done, what is deliberately simplified, and what comes next.
+Working notes for any agent (or person) picking up Marine Compute Swarm. Covers what the project is, how it is built, what is done, what is deliberately simplified, and what comes next.
 
 ## Purpose
 
-Solar Swarm is a locally served 3D web simulation of a swarm of floating, solar-powered compute nodes that track clouds and steer away from shade. It has two jobs:
+Marine Compute Swarm is a locally served 3D web simulation of a swarm of floating, solar-powered compute nodes that track clouds and steer away from shade. It has two jobs:
 
 1. **Investor demo.** The first screen leads with value: energy, compute, revenue and carbon offset for a daylight day, plus scale-up buttons (100 / 1,000 / 10,000 nodes). It must argue that the concept is realistic, has ROI, and scales across the planet.
 2. **Design tool.** The founder can hover, click into an exploded view, and edit hardware to review and change the node design.
@@ -68,7 +68,7 @@ Three layers, dependencies pointing downward only.
 
 ## Progress so far
 
-Everything in the 15-task V1 plan (`docs/plans/2026-10-26-solar-swarm-v1.md`) is implemented. Design doc: `docs/design/2026-10-26-solar-swarm-v1-design.md`.
+Everything in the 15-task V1 plan (`docs/plans/2026-10-26-marine-compute-swarm-v1.md`) is implemented. Design doc: `docs/design/2026-10-26-marine-compute-swarm-v1-design.md`.
 
 Status at last check: `tsc` clean, 35 test files / 211 tests passing, production build succeeds.
 
@@ -108,7 +108,7 @@ Design: `docs/design/2026-10-27-master-node-view-design.md`. Simulates only the 
 
 ## Deployment
 
-Production: https://solar-swarm.vercel.app (Vercel project `solar-swarm`, linked in `.vercel/`, which is git-ignored). Vercel names cannot contain underscores, so `solar_swarm` is not available. `vercel.json` pins Vite and `dist`. Deploy with `npx vercel@latest deploy --prod --yes` from the repo root. The project is not yet connected to a Git remote, so pushes do not deploy by themselves.
+Production: https://marine-compute-swarm.vercel.app (Vercel project `marine-compute-swarm`, linked in `.vercel/`, which is git-ignored). Vercel names cannot contain underscores, so `marine-compute-swarm` is not available. `vercel.json` pins Vite and `dist`. Deploy with `npx vercel@latest deploy --prod --yes` from the repo root. GitHub remote: `git@github.com:jeanbuntu/marine-compute-swarm.git`. Vercel deployment is currently manual; a Git push alone does not publish changes.
 
 ## Next steps
 
@@ -177,3 +177,11 @@ Production: https://solar-swarm.vercel.app (Vercel project `solar-swarm`, linked
 - Up to three connected workers with >=35% battery can extend a chain toward a fresh reported fix, using 70% of the assumed hop radius for maneuver margin. Assignment stays stable; each goal is clamped relative to the preceding relay's actual current position. Escorts retain main-fleet connectivity in the calm regression drill and remain assigned after first contact until the target is back inside the direct-link margin.
 - Dispatch is held/aborted for wildlife, coordinator failure/low reserve, insufficient propulsion margin, too few eligible escorts, stale (>15 min) fixes, beyond-chain range, capsize, ingress or main-power failure. Those cases request physical retrieval. No towing, charging transfer, independent compute uplink, optimal expanding search or collision avoidance is claimed. Normal autonomous return and reserve charging continue independently.
 - The recovery panel exposes report source/age/payload, independent reserve, plan/reason, escort IDs and satellite/sky failure controls. GPS is receive-only; distress transmission requires its own satellite modem and service. Iridium SBD is a candidate reference, not an integrated provider.
+
+
+## Project navigation and name transition
+
+- The product is Marine Compute Swarm; local checkout is `/Users/jvgmr/marine-compute-swarm`, repository is `jeanbuntu/marine-compute-swarm`, and Vercel project is `marine-compute-swarm` (same project ID). Earlier Git history retains the Solar Swarm name; README records the transition.
+- `SiteHeader` supplies a fixed 56 px title bar with home branding, current page name and a three-line Menu button on Swarm, Unit Bench and Weather Simulator. Its dropdown links to the landing Swarm, master/worker benches, weather and master/worker recovery views. It marks the current page and supports keyboard navigation, Escape, outside click and focus restoration.
+- Swarm/Unit Bench viewports begin below the shared title bar, so 3D picking and layout rectangles retain the same local coordinates. Weather uses top padding. The landing page impact summary stacks below the controls at narrower widths instead of overlapping them. Unit role and recovery detail changes update the title bar and document title.
+- `marine-compute-swarm.vercel.app` is canonical. `vercel.json` redirects the legacy `solar-swarm.vercel.app` host while retaining paths/query strings; retain its alias for compatibility. Old names in this compatibility rule and the transition note are intentional.

@@ -1,3 +1,4 @@
+import { SiteHeader } from '../SiteHeader';
 import { useStore } from '../../state/store';
 import { Dimensions } from '../Dimensions';
 import { MasterScene } from '../../scene/master/MasterScene';
@@ -20,11 +21,7 @@ function TopBar() {
   const s = useMaster(), t = msim.telemetry;
   return (
     <header className="panel mtop">
-      <b style={{ fontSize: 16 }}>Unit bench</b>
       <Seg label="Unit type" value={s.role} options={[{ v: 'master', label: 'Master' }, { v: 'worker', label: 'Worker' }]} onChange={s.setRole} />
-      <a className="mlink" href="?" title="Back to the swarm view">← Swarm</a>
-      <a className="mlink" href="?view=weather">Weather simulator</a>
-      <a className="mlink" href={`?view=weather&inspect=${s.role}`}>Recovery close-up ↗</a>
       <Seg label="Camera" value={s.view} options={VIEWS} onChange={(v) => s.set({ view: v })} />
       <button aria-pressed={s.controlsOpen} onClick={() => s.set({ controlsOpen: !s.controlsOpen, analysisOpen: false })}>Conditions</button>
       <button aria-pressed={s.analysisOpen && !s.dimensions} onClick={() => s.set({ analysisOpen: !s.analysisOpen || s.dimensions, dimensions: false, controlsOpen: false })}>Analysis</button>
@@ -45,6 +42,7 @@ export function MasterApp() {
   const analysis = useSkyAnalysis();
   return (
     <div className="mroot">
+      <SiteHeader page={role} />
       {webgl ? <MasterScene key={role} /> : <p style={{ color: '#cfe6ff', padding: '200px 24px 24px' }}>The 3D view needs WebGL, which this browser does not provide.</p>}
       <TopBar />
       {controlsOpen && <LeftDrawer />}
