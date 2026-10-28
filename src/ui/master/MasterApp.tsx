@@ -23,6 +23,8 @@ function TopBar() {
       <b style={{ fontSize: 16 }}>Unit bench</b>
       <Seg label="Unit type" value={s.role} options={[{ v: 'master', label: 'Master' }, { v: 'worker', label: 'Worker' }]} onChange={s.setRole} />
       <a className="mlink" href="?" title="Back to the swarm view">← Swarm</a>
+      <a className="mlink" href="?view=weather">Weather simulator</a>
+      <a className="mlink" href={`?view=weather&inspect=${s.role}`}>Recovery close-up ↗</a>
       <Seg label="Camera" value={s.view} options={VIEWS} onChange={(v) => s.set({ view: v })} />
       <button aria-pressed={s.controlsOpen} onClick={() => s.set({ controlsOpen: !s.controlsOpen, analysisOpen: false })}>Conditions</button>
       <button aria-pressed={s.analysisOpen && !s.dimensions} onClick={() => s.set({ analysisOpen: !s.analysisOpen || s.dimensions, dimensions: false, controlsOpen: false })}>Analysis</button>

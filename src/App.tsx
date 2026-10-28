@@ -1,3 +1,4 @@
+import { WeatherApp } from './ui/weather/WeatherApp';
 import { MasterApp } from './ui/master/MasterApp';
 import { SwarmScene } from './scene/SwarmScene';
 import { readView } from './scene/urlState';
@@ -11,6 +12,7 @@ import { NodeCameraPanel } from './ui/NodeCameraPanel';
 import './ui/styles.css';
 
 export function App() {
+  if (typeof window !== 'undefined' && readView(window.location.search) === 'weather') return <WeatherApp />;
   if (typeof window !== 'undefined' && readView(window.location.search) !== 'swarm') return <MasterApp />;
   const webgl = hasWebGL();
   return (

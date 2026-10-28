@@ -22,6 +22,7 @@ export function HeroPanel() {
         <button onClick={() => setDrawer(!drawerOpen)} aria-expanded={drawerOpen}>Controls</button>
       </div>
       <div className="small"><a href="?view=unit&role=master" style={{ color: 'var(--accent)' }}>Unit bench · Master / Worker →</a></div>
+      <div className="small"><a href="?view=weather" style={{ color: 'var(--accent)' }}>Weather simulator →</a></div>
       <div className="dim small">Drag to orbit · Shift + drag to pan · Scroll to zoom</div>
     </header>
   );

@@ -46,14 +46,28 @@ function commonParts(): Part[] {
       'Near the center of rotation to read heave and heel cleanly.'),
     part('sky-camera', 'Wide-angle sky camera', 'camera', 1.5, [h * 0.35, DECK_Y + 0.12, -h * 0.35], [0.12, 0.12, 0.12], 4, 400,
       'Raised dome just off deck center (the master mast takes the center) with a fisheye view of the sky for cloud tracking.'),
+    part('recovery-cassette', 'Righting bag cassette', 'hull', 8, [0.63, DECK_Y - 0.13, 0], [0.26, 0.20, 0.40], 0, 1400,
+      'EST one-shot inflatable righting bag, packed below a retained deck hatch. Off-centre inflation is a recovery concept; full-angle stability, inflation under hydrostatic pressure and panel/mast clearance require validation.'),
+    part('righting-gas', 'Righting gas cylinder and valve', 'hull', 7, [0.62, DECK_Y - 0.40, 0], [0.14, 0.25, 0.14], 0, 650,
+      'EST protected compressed-gas source beneath the cassette, with a short retained line and relief valve. Gas charge, pressure vessel and actual inflation time remain unspecified.'),
+    part('safety-controller', 'Isolated recovery controller', 'navigation', 1.2, [0.58, 0.70, -0.33], [0.12, 0.08, 0.12], 2, 350,
+      'EST separately sealed controller and propulsion isolation contactor. Receives IMU and leak signals; proposed automatic firing needs redundant sensing and false-trigger testing.'),
+    part('distress-beacon', 'Independent distress telemetry pod', 'comms', 2, [-0.62, DECK_Y + 0.10, 0.17], [0.14, 0.16, 0.14], 1, 850,
+      'EST low-rate satellite distress modem, independent GNSS, 20 Wh local reserve cell and strobe in a sealed radome; included in the 2 kg pod allowance. Reports position, main battery and fault to shore independently of master Starlink. Weather rehearses delivery with explicit energy, sky-view and channel assumptions; no actual provider connection, confirmed RF budget or compute uplink.'),
+    part('leak-sensor', 'Bilge leak sensor', 'navigation', 0.2, [-0.62, 0.40, -0.42], [0.06, 0.025, 0.06], 0.2, 90,
+      'EST low-point moisture sensor inside the main shell; blocks restart following ingress. It detects water, not hull integrity.'),
+    part('perimeter-bumper', 'Retained perimeter bumper', 'hull', 6, [0, DECK_Y - 0.07, 0], [HULL_SIDE + 0.06, 0.10, HULL_SIDE + 0.06], 0, 480,
+      'EST continuous rounded elastomer rub rail, without loose tethers. Reduces exposed hard edges; it is not a whale-impact rating or credited flotation volume.'),
+    part('panel-restraints', 'Captive panel drive locks', 'petals', 2.4, [0, DECK_Y - 0.025, 0], [HULL_SIDE, 0.04, HULL_SIDE], 0, 420,
+      'EST captive locks at the eight hinges retain the panels at their current safe pose when power is isolated. No new folding path is assumed during capsize.'),
     part('mesh-radio', 'Mesh radio and mast', 'comms', 4, [-h * 0.6, DECK_Y + 0.3, -h * 0.6], [0.1, 0.6, 0.1], 10, 500,
       'Short mast lifts the antenna above spray and petal shadow for the link to neighbors.'),
   ];
   const corners: [number, number][] = [[1, 1], [1, -1], [-1, -1], [-1, 1]];
   corners.forEach(([sx, sz], i) => {
-    parts.push(part(`thruster-${i + 1}`, `Thruster ${i + 1} (45 deg)`, 'propulsion', 4.5,
+    parts.push(part(`thruster-${i + 1}`, `Thruster ${i + 1} (45 deg)`, 'propulsion', 5.3,
       [sx * (h * 0.6 + 0.12), 0.23, sz * (h * 0.6 + 0.12)], [0.16, 0.16, 0.3], 300, 1200,
-      'Fixed 45 degree corner thruster below the waterline; the four together push in any direction with no steering parts.'));
+      'Fixed 45 degree corner thruster with rounded shroud and inlet/outlet guards. Includes 0.8 kg EST guard allowance per drive. Guard pressure loss and animal-contact performance are unvalidated; capsize and wildlife hold isolate propulsion.'));
   });
   const pg = petalGeometry({ hullSideM: HULL_SIDE, petalLengthM: PETAL_LEN });
   for (const [i, tag] of PETAL_IDS.entries()) {

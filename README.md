@@ -78,3 +78,26 @@ Compute estimates count the two GPU cards only, using 121 dense FP16 Tensor TFLO
 The eight petals no longer use outlines that tile only when flat. Their edges reserve the swept space needed for independent ±30° travel, with rounded 40 mm corner setbacks. Larger angles remain available up to the mechanical stop, but `petalClearance.ts` checks conservative convex prisms enclosing the frame, glass and underside rails for every pair of panels. Separating-axis checks and a vertex-displacement bound certify the entire swept move; the linked drives stop at a 12 mm operating clearance, with an 8 mm guaranteed swept-clearance floor. The analysis panel reports this interlock and PV output uses the actual stopped angles. This is a deployed panel-envelope check, not validation of the detailed gearbox, actuator or folding mechanism.
 
 Collecting area includes the narrower outline, cell inset and rounded corner cutouts. Static swarm/inspection geometry uses the same outline. The simplified stowed stack uses 100 mm layer spacing to clear the rails; folding transitions are still not simulated.
+
+### Weather Simulator
+
+Open `?view=weather` (also linked from Swarm and Unit bench) for seven weather rehearsal tabs: Day, Night, Heavy winds, Storm, High swells, Tides and Current. Drag a node out of formation, inspect mesh relay reachability and battery balance, or inject capsize, wildlife impact, ingress, low battery and coordinator loss. Conditions are editable; switching tabs resets the fleet and conditions, while Reset fleet preserves edited conditions.
+
+The page explores a proposed recovery policy: mesh retries, autonomous return to cached formation slots, compute shedding at 25% battery, propulsion reserve at 10%, and physical retrieval when inverted or unable to make headway. Wildlife hold idles fleet propulsion. The nominal 250 m radio radius and weather penalties are assumptions to test. Motion, illustrative wave roll and injected damage do not validate open-ocean survivability or self-righting. Read “Recovery & design rationale” on the page for hardware tradeoffs and unmodeled hazards.
+
+### Recovery hardware concept and 3D close-ups
+
+Workers and the master share an updated retained rub rail, guarded thrusters, captive panel locks, a packed gas-assisted righting bag, protected gas source, isolated recovery controller, leak sensor and candidate distress telemetry pod. Their estimated mass and overhead feed the existing hardware model; both defaults still pass the upright deployed/stowed checks.
+
+Use **Weather Simulator → 3D recovery close-up**, or **Unit bench → Recovery close-up**, to inspect Assembly, Cutaway and Mechanism views. Scrub through knockdown, propulsion isolation, bag inflation, roll and verification; select individual components or enable the inflation-failure branch. The proposed offset bag avoids a permanent dome above the solar deck. It remains inflated after the replay and requires servicing.
+
+This is a mechanism demonstration with prescribed poses, not proof of self-righting. Full-angle stability, wave-basin tests, compressed-gas sizing, bag deployment clearance, guard drag and inverted radio performance remain unresolved. Replay does not clear simulated fleet faults or authorize propulsion restart.
+
+
+### Low-power and lost-link recovery drills
+
+Weather Simulator now includes an explicit recovery coordinator. At 8% main battery it keeps navigation/mesh essentials alive and idles compute and propulsion; solar can recharge the node, with propulsion held until above 15%. A proposed separate GNSS + low-rate satellite modem can report position, battery and fault using an assumed 20 Wh reserve, including when main power fails. GPS determines position; the satellite modem transmits it independently of the master’s Starlink.
+
+Simulated delivery assumes 60 s acquisition, 5-minute updates and 0.2 Wh per packet; these are test settings, not provider guarantees. Disable the satellite test channel or antenna sky view to rehearse failures. Inversion blocks delivery. The UI distinguishes current truth positions from received fixes and their age.
+
+When conditions permit, at most three healthy connected workers (35% minimum charge) form a bounded relay chain toward the reported fix, retaining maneuver and battery margin. Unsafe drift, a stale or distant fix, lost coordination, wildlife, insufficient escorts or physical damage leads to retrieval instead. Escorts cannot tow or recharge a stranded node. There is no live satellite service, and a shore distress report does not restore compute backhaul.

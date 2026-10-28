@@ -5,6 +5,7 @@ import { GPU, PANEL_CORNER_M, PETAL_PAIRS, PETAL_IDS, PETAL_DIRS, petalGeometry,
 import type { ThreeEvent } from '@react-three/fiber';
 import { CylinderGeometry, SphereGeometry, TorusGeometry, MeshStandardMaterial, CanvasTexture, DataTexture, RGBAFormat, SRGBColorSpace, LinearFilter, LinearMipmapLinearFilter, Vector3, Quaternion } from 'three';
 import type { NodeDesign, Part, Subsystem } from '../model/parts';
+import { RIGHTING_BAG, recoveryHardware } from '../model/recovery';
 import { partPosition, PETAL_TILT_DEG, type PetalState } from '../model/hydrostatics';
 
 type V3 = [number, number, number];
@@ -157,16 +158,18 @@ function Shell({ width, height, hot, ghost, keel = false }: { width: number; hei
 export interface NodeModelProps {
   design: NodeDesign; petals: PetalState; offsets?: Record<string, V3>;
   highlightId?: string | null; hotAll?: boolean; ghostShell?: boolean; hidePetals?: boolean;
+  recoveryInflation?: number; recoveryHatch?: number;
   onPartOver?(id: string | null): void; onPartClick?(id: string): void;
 }
 
-export function NodeModel({ design, petals, offsets = {}, highlightId, hotAll, ghostShell, hidePetals, onPartOver, onPartClick }: NodeModelProps) {
+export function NodeModel({ design, petals, offsets = {}, highlightId, hotAll, ghostShell, hidePetals, recoveryInflation = 0, recoveryHatch = 0, onPartOver, onPartClick }: NodeModelProps) {
   const separated = Object.keys(offsets).length > 0;
   const battery = design.parts.find(p => p.id === 'battery');
   const bus = design.parts.find(p => p.id === 'mppt-bus');
   const compute = design.parts.find(p => p.id === 'compute-pod');
   const exchanger = design.parts.find(p => p.id === 'heat-exchanger');
   return <group>
+    {recoveryInflation > 0.001 && <RightingBag design={design} inflation={recoveryInflation} />}
     {!separated && PETAL_PAIRS.map((pair, i) => {
       const root = design.hullSideM / 2, y = design.keelDepthM + design.hullDepthM - 0.035;
       const [a, b] = pair.map(id => PETAL_DIRS[id]);
@@ -190,12 +193,12 @@ export function NodeModel({ design, petals, offsets = {}, highlightId, hotAll, g
       const e: V3 = [a[0], exchanger.pos[1] + exchanger.size[1] * 0.3, c[2]];
       return <group key={s}><Tube a={a} b={b} radius={0.012} color="#344e55" /><Tube a={b} b={c} radius={0.012} color="#344e55" /><Tube a={c} b={e} radius={0.012} color="#344e55" /></group>;
     })}
-    {design.parts.filter(p => !(hidePetals && p.id.startsWith('petal-'))).map(p => <PartMesh key={p.id} part={p} design={design} petals={petals} offset={offsets[p.id]} hot={!!hotAll || highlightId === p.id} ghost={!!ghostShell && (p.subsystem === 'hull' || p.id === 'deck-pv')} separated={separated} onOver={onPartOver} onClick={onPartClick} />)}
+    {design.parts.filter(p => !(hidePetals && p.id.startsWith('petal-'))).map(p => <PartMesh key={p.id} part={p} design={design} petals={petals} offset={offsets[p.id]} hot={!!hotAll || highlightId === p.id} ghost={!!ghostShell && (p.subsystem === 'hull' || p.id === 'deck-pv')} separated={separated} hatch={recoveryHatch} onOver={onPartOver} onClick={onPartClick} />)}
   </group>;
 }
 
-function PartMesh({ part: p, design: d, petals, offset = [0, 0, 0], hot, ghost, separated, onOver, onClick }: {
-  part: Part; design: NodeDesign; petals: PetalState; offset?: V3; hot: boolean; ghost: boolean; separated: boolean;
+function PartMesh({ part: p, design: d, petals, offset = [0, 0, 0], hot, ghost, separated, hatch = 0, onOver, onClick }: {
+  part: Part; design: NodeDesign; petals: PetalState; offset?: V3; hot: boolean; ghost: boolean; separated: boolean; hatch?: number;
   onOver?(id: string | null): void; onClick?(id: string): void;
 }) {
   const id = p.id, side = d.hullSideM, deck = d.keelDepthM + d.hullDepthM;
@@ -211,6 +214,41 @@ function PartMesh({ part: p, design: d, petals, offset = [0, 0, 0], hot, ghost, 
   let content;
   if (id === 'hull-shell' || id === 'keel-pod') {
     content = <Shell width={id === 'hull-shell' ? side : side * 0.6} height={id === 'hull-shell' ? d.hullDepthM : d.keelDepthM} hot={hot} ghost={ghost} keel={id === 'keel-pod'} />;
+  } else if (id === 'perimeter-bumper') {
+    content = <RubRail side={side} hot={hot} ghost={ghost} />;
+  } else if (id === 'panel-restraints') {
+    content = <>{PETAL_IDS.map(tag => { const [x,,z] = PETAL_DIRS[tag]; return <group key={tag} position={[x * side * 0.47, 0, z * side * 0.47]} rotation={[0, -Math.atan2(z,x), 0]}><Block size={[0.07,0.07,0.13]} color="#546b6d" hot={hot} /><Block at={[0,0.04,0]} size={[0.03,0.025,0.08]} color="#d49a54" hot={hot} /></group>; })}</>;
+  } else if (id === 'recovery-cassette') {
+    const top = p.size[1] / 2;
+    content = <>
+      <Block size={p.size} color="#354e56" hot={hot} ghost={ghost} />
+      <Block at={[0,top + 0.018,0]} size={[0.29,0.025,0.43]} color="#253b42" />
+      <group position={[-0.145,top + 0.036,0]} rotation={[0,0,hatch * 1.8]}>
+        <Block at={[0.145,0,0]} size={[0.29,0.022,0.43]} color="#d3dcd7" hot={hot} />
+        <Block at={[0.145,0.014,0]} size={[0.21,0.008,0.06]} color="#d89a54" />
+        <Label text="RIGHTING / GAS" width={0.22} at={[0.145,0.02,0.10]} top />
+      </group>
+      {separated && <Block at={[0,top + .11,0]} size={[.22,.05,.32]} color="#d4914a" hot={hot} />}
+    </>;
+  } else if (id === 'righting-gas') {
+    content = <>
+      <mesh geometry={cyl} scale={[.065,.20,.065]} material={material('#b7c4c1',hot)} />
+      <mesh position={[0,.10,0]} scale={[.065,.04,.065]}><sphereGeometry args={[1,16,8]} /><meshStandardMaterial color="#b7c4c1" metalness={.55} roughness={.35} /></mesh>
+      <Block at={[0,.13,0]} size={[.06,.04,.05]} color="#c8964e" hot={hot} />
+      <Tube a={[0,.15,0]} b={[0,.26,0]} radius={.009} color="#314c54" />
+      <Block at={[0,0,.066]} size={[.07,.09,.005]} color="#db9a4d" />
+    </>;
+  } else if (id === 'distress-beacon') {
+    content = <>
+      <Block at={[0,-.04,0]} size={[.14,.07,.14]} color="#3d5359" hot={hot} />
+      <mesh geometry={dome} scale={[.069,.085,.069]} material={material('#e7e8d9',hot)} />
+      <mesh geometry={ring} rotation={[Math.PI/2,0,0]} scale={[.062,.062,.062]} material={material('#d99a4e',hot)} />
+      <Label text="SOS / GNSS" width={.12} at={[0,-.035,.072]} />
+    </>;
+  } else if (id === 'safety-controller') {
+    content = <><Block size={p.size} color="#466961" hot={hot} /><Block at={[0,p.size[1]/2+.008,0]} size={[.09,.012,.08]} color="#c4cfc6" /><Label text="ISOLATE" width={.10} at={[0,p.size[1]/2+.016,0]} top /></>;
+  } else if (id === 'leak-sensor') {
+    content = <><Block size={p.size} color="#d8a05b" hot={hot} /><Block at={[0,.014,0]} size={[.045,.005,.04]} color="#334f57" /></>;
   } else if (id.startsWith('petal-')) {
     const tag = id.slice(6) as PetalId, dir = PETAL_DIRS[tag], pg = petalGeometry(d);
     const angle = petals === 'deployed' ? PETAL_TILT_DEG * Math.PI / 180 : 0;
@@ -229,8 +267,9 @@ function PartMesh({ part: p, design: d, petals, offset = [0, 0, 0], hot, ghost, 
     content = <group rotation={[0, a, 0]}>
       <mesh geometry={cyl} material={material('#253c43', hot)} rotation={[Math.PI / 2, 0, 0]} scale={[0.065, 0.25, 0.065]} />
       {[-1, 1].map(s => <mesh key={s} geometry={ring} material={material('#acb9ba', hot)} position={[0, 0, s * 0.14]} scale={[0.08, 0.08, 0.08]} />)}
-      <Block at={[0, 0, 0.145]} size={[0.12, 0.018, 0.015]} color="#afb9b6" />
-      <Block at={[0, 0, 0.145]} size={[0.018, 0.12, 0.015]} color="#afb9b6" />
+      {[-1,1].map(end => <group key={end} position={[0,0,end*.145]}>
+        {[-.035,0,.035].map(v => <group key={v}><Block at={[v,0,0]} size={[.009,.125,.012]} color="#aabbb7" /><Block at={[0,v,.003]} size={[.125,.009,.012]} color="#aabbb7" /></group>)}
+      </group>)}
       <Tube a={[0, 0.065, 0]} b={[0, d.keelDepthM - p.pos[1] + 0.04, -0.14]} radius={0.021} />
       <Block at={[0, d.keelDepthM - p.pos[1] + 0.04, -0.14]} size={[0.1, 0.035, 0.1]} />
     </group>;
@@ -312,4 +351,31 @@ function PartMesh({ part: p, design: d, petals, offset = [0, 0, 0], hot, ghost, 
     </>;
   }
   return <group name={id} position={pos} {...handlers}>{content}</group>;
+}
+
+
+function RubRail({ side, hot, ghost }: { side: number; hot: boolean; ghost: boolean }) {
+  const geometry = useMemo(() => {
+    const shape = roundedOutline(side + .06, .12);
+    shape.holes.push(roundedOutline(side - .035, .075));
+    return new ExtrudeGeometry(shape,{depth:.10,bevelEnabled:true,bevelSize:.012,bevelThickness:.012,bevelSegments:2,curveSegments:8});
+  },[side]);
+  useEffect(() => () => geometry.dispose(),[geometry]);
+  return <group><mesh geometry={geometry} rotation={[-Math.PI/2,0,0]} position={[0,-.05,0]} material={material('#2f4b51',hot,ghost)} />
+    {[-1,1].map(s => <Block key={s} at={[s*(side/2+.035),0,0]} size={[.008,.055,.22]} color="#d2bc7f" ghost={ghost} />)}
+  </group>;
+}
+
+/** Deployed soft righting volume; a mechanical concept, never credited as permanent hull buoyancy. */
+export function RightingBag({ design, inflation }: { design: NodeDesign; inflation: number }) {
+  const { bagCenter } = recoveryHardware(design);
+  const radii = RIGHTING_BAG.radii;
+  return <group>
+    <group position={bagCenter} scale={Math.max(.001,inflation)}>
+      <mesh scale={radii}><sphereGeometry args={[1,32,20]} /><meshStandardMaterial color="#dca35f" roughness={.74} metalness={.02} /></mesh>
+      {[0,Math.PI/2].map(a => <mesh key={a} rotation={[0,a,0]} scale={[radii[0]*1.006,radii[1]*1.006,1]}><torusGeometry args={[1,.006,6,48]} /><meshStandardMaterial color="#a87542" roughness={.9} /></mesh>)}
+      <mesh rotation={[Math.PI/2,0,0]} scale={[radii[0]*1.006,radii[2]*1.006,1]}><torusGeometry args={[1,.008,6,48]} /><meshStandardMaterial color="#eee1bb" roughness={.85} /></mesh>
+    </group>
+    <Tube a={[.63,design.keelDepthM+design.hullDepthM,0]} b={[bagCenter[0],bagCenter[1]-radii[1]*inflation,0]} radius={.018} color="#38535a" />
+  </group>;
 }
