@@ -15,5 +15,10 @@
       "destination": "https://marine-compute-swarm.vercel.app/:path*",
       "permanent": true
     }
-  ]
+  ],
+  "functions": {
+    "api/muse.ts": {
+      "maxDuration": 60
+    }
+  }
 }

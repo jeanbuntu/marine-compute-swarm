@@ -1,3 +1,4 @@
+import { searchPlan } from './reasoning/search';
 import { advanceRighting, initialRighting, weatherSun, type RightingState } from './weatherRecovery';
 import type { Designs } from './swarm';
 import { batteryCapacityWh, hexSlots, thrustPowerW } from './swarm';
@@ -20,7 +21,7 @@ export const SCENARIOS: Scenario[] = [
   { id: 'tides', name: 'Tides', subtitle: 'Reversing tidal stream', question: 'Can it return before the tidal stream outruns its thrusters?', rationale: 'Water level and horizontal tidal flow are separate. A 12.42-hour sinusoid changes level and current; this is a conceptual tide, not a local forecast or grounding model.', conditions: { ...base, current: 0.1, tide: 0.7, swell: 0.6 } },
   { id: 'current', name: 'Current', subtitle: 'Beyond propulsion authority', question: 'What happens when the water moves faster than the node?', rationale: 'Ground velocity equals through-water propulsion plus current and estimated wind slip. When return makes no headway, stop promising recovery and request retrieval.', conditions: { ...base, current: 0.75, tide: 0.15, swell: 1 } },
 ];
-export type Mode = 'Holding' | 'Drifting' | 'Link grace' | 'Returning' | 'Retrieval' | 'Inverted' | 'Wildlife hold' | 'Power reserve' | 'Relay escort' | 'Self-righting' | 'Recovery escort' | 'Offline';
+export type Mode = 'Holding' | 'Drifting' | 'Link grace' | 'Returning' | 'Retrieval' | 'Inverted' | 'Wildlife hold' | 'Power reserve' | 'Relay escort' | 'Self-righting' | 'Recovery escort' | 'Offline' | 'Reasoning hold';
 export interface WeatherNode {
   id: string; role: 'master' | 'worker'; x: number; y: number; homeX: number; homeY: number;
   righting: RightingState;
@@ -29,7 +30,7 @@ export interface WeatherNode {
   report: PositionReport | null;
   wh: number; lostS: number; inverted: boolean; ingress: boolean; mode: Mode; pvW: number; loadW: number;
 }
-export interface WeatherState { rightingOperational: boolean; recoveryFormation: 'escort'|'fleet'; satelliteAvailable: boolean; skyView: boolean; rescue: RescuePlan | null; t: number; nodes: WeatherNode[]; masterOnline: boolean; wildlife: boolean; events: { t: number; message: string }[] }
+export interface WeatherState { reasoningPolicy?: {strategy:'baseline'|'escort'|'fleet'|'conserve'|'hold'|'retrieve'|'search';searchRadiusM?:number;expiresAt:number}; rightingOperational: boolean; recoveryFormation: 'escort'|'fleet'; satelliteAvailable: boolean; skyView: boolean; rescue: RescuePlan | null; t: number; nodes: WeatherNode[]; masterOnline: boolean; wildlife: boolean; events: { t: number; message: string }[] }
 export const logEvent = (s: WeatherState, message: string): WeatherState => ({ ...s, events: [{ t: s.t, message }, ...s.events].slice(0, 40) });
 export function createWeather(designs: Designs): WeatherState {
   return { rightingOperational: true, recoveryFormation: 'escort', satelliteAvailable: true, skyView: true, rescue: null, t: 0, masterOnline: true, wildlife: false, events: [], nodes: hexSlots(13, 100).map(([x, y], i) => {
@@ -95,7 +96,11 @@ export function stepWeather(state: WeatherState, c: Conditions, scenario: Scenar
       return {...n,reserveHold,report,beaconWh,beaconWaitS,lastSatelliteS,beaconStatus};
     });
     const reportState={...s,nodes:reported};
-    const rescue=planRescue(reportState,c,env.range,Math.hypot(env.vx,env.vy),net.connected,designs);
+    const policy=s.reasoningPolicy && s.reasoningPolicy.expiresAt>s.t && net.connected.has('M') ? s.reasoningPolicy : undefined;
+    const plannerState=policy?.strategy==='fleet'||policy?.strategy==='escort'?{...reportState,recoveryFormation:policy.strategy==='fleet'?'fleet' as const:'escort' as const}:reportState;
+    const baselinePlan=planRescue(plannerState,c,env.range,Math.hypot(env.vx,env.vy),net.connected,designs);
+    const planned=policy?.strategy==='search'?searchPlan(plannerState,c,env.range,env,net.connected,designs,baselinePlan,policy.searchRadiusM):baselinePlan;
+    const rescue=planned && policy?.strategy==='retrieve'?{...planned,status:'Shore retrieval' as const,reason:'Muse requests physical retrieval; autonomous recovery dispatch held.',waypoints:[],relayIds:[],escortIds:[]}:planned;
     const nodes = reported.map(n => {
       const d = designs[n.role], capacity = batteryCapacityWh(d), soc = n.wh / capacity;
       const lostS = net.connected.has(n.id) ? 0 : n.lostS + h;
@@ -124,15 +129,16 @@ export function stepWeather(state: WeatherState, c: Conditions, scenario: Scenar
       if (isolated && distance > 2 && headway <= 0.01) mode = 'Retrieval';
       if (relay) mode = relay.kind==='ring'||relay.kind==='fleet'?'Recovery escort':'Relay escort';
       if (n.reserveHold) mode = 'Power reserve';
+      if (policy?.strategy==='hold') mode = 'Reasoning hold';
       if (s.wildlife) mode = 'Wildlife hold';
       if (n.inverted) mode = n.righting.phase==='Failed'?'Inverted':'Self-righting';
       if (n.ingress || n.wh <= 0 || (n.role === 'master' && !s.masterOnline)) mode = 'Offline';
-      const stopped = ['Power reserve', 'Wildlife hold', 'Inverted', 'Self-righting', 'Offline'].includes(mode);
+      const stopped = ['Power reserve', 'Reasoning hold', 'Wildlife hold', 'Inverted', 'Self-righting', 'Offline'].includes(mode);
       if (stopped) { tx = 0; ty = 0; }
       const pv = n.inverted || mode === 'Offline' ? 0 : pvPowerW(d, sunlight.ghi, Math.max(0.05, 1 - c.rain / 60)) * (env.stowed ? 0.2 : 1);
       const computeW = d.parts.filter(p => p.subsystem === 'compute').reduce((v, p) => v + p.powerW, 0);
       const essentialW=d.parts.filter(p=>p.subsystem==='navigation' || ['mesh-radio','bms'].includes(p.id)).reduce((sum,p)=>sum+p.powerW,0);
-      const load = mode === 'Offline' ? 0 : n.inverted ? 15 : n.reserveHold ? essentialW : loadW(d, thrustPowerW(Math.hypot(tx, ty))) - (soc < 0.25 || s.wildlife || relay ? computeW : 0);
+      const load = mode === 'Offline' ? 0 : n.inverted ? 15 : n.reserveHold ? essentialW : loadW(d, thrustPowerW(Math.hypot(tx, ty))) - (soc < 0.25 || s.wildlife || relay || policy?.strategy==='conserve' || policy?.strategy==='hold' ? computeW : 0);
       const wh = stepBattery(n.wh, capacity, pv - load, h);
       return { ...n, x: n.x + (tx + env.vx) * h, y: n.y + (ty + env.vy) * h, lostS, mode, wh, pvW: mode === 'Offline' ? 0 : pv, loadW: load };
     });

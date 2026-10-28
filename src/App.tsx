@@ -13,6 +13,7 @@ import { NodeCameraPanel } from './ui/NodeCameraPanel';
 import './ui/styles.css';
 
 export function App() {
+  if (typeof window !== 'undefined' && readView(window.location.search) === 'reasoning') return <WeatherApp reasoning />;
   if (typeof window !== 'undefined' && readView(window.location.search) === 'weather') return <WeatherApp />;
   if (typeof window !== 'undefined' && readView(window.location.search) !== 'swarm') return <MasterApp />;
   const webgl = hasWebGL();

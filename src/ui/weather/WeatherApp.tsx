@@ -1,3 +1,5 @@
+import { ReasoningPanel } from '../reasoning/ReasoningPanel';
+import { observe, signature, validateDecision, type Decision, type Observation } from '../../model/reasoning/harness';
 import { fitFleet, mapPoint, worldPoint, type MapCamera } from '../../model/fleetMap';
 import { weatherSun } from '../../model/weatherRecovery';
 import { SiteHeader } from '../SiteHeader';
@@ -24,8 +26,9 @@ const controls: { key: keyof Conditions; label: string; unit: string; min: numbe
   { key: 'speed', label: 'Through-water speed limit · EST', unit: 'm/s', min: 0.1, max: 1, step: 0.05 },
 ];
 
-export function WeatherApp() {
+export function WeatherApp({ reasoning = false }: { reasoning?: boolean }) {
   const designs = useStore(s => s.designs);
+  const [reasoningEpoch,setReasoningEpoch]=useState(0);
   const [scenario, setScenario] = useState<ScenarioId>('day');
   const preset = SCENARIOS.find(p => p.id === scenario)!;
   const [conditions, setConditions] = useState<Conditions>({ ...preset.conditions });
@@ -74,7 +77,7 @@ export function WeatherApp() {
   };
   const changeScenario = (id: ScenarioId) => {
     setScenario(id); setConditions({ ...SCENARIOS.find(p => p.id === id)!.conditions });
-    setState(createWeather(designs)); select('W01');
+    setReasoningEpoch(v=>v+1); setState(createWeather(designs)); select('W01');
   };
   const pointerPosition = (e: React.PointerEvent<SVGSVGElement>) => {
     const point = svg.current!.createSVGPoint(); point.x = e.clientX; point.y = e.clientY;
@@ -89,16 +92,24 @@ export function WeatherApp() {
   };
   const netPower = node.pvW - node.loadW;
   return <div className={`weather-app weather-${scenario}`}>
-    <SiteHeader page={detailOpen ? node.role === 'master' ? 'master-recovery' : 'worker-recovery' : 'weather'} />
+    <SiteHeader page={reasoning ? 'reasoning' : detailOpen ? node.role === 'master' ? 'master-recovery' : 'worker-recovery' : 'weather'} />
     <main>
-      <div className="w-heading"><div><div className="w-eyebrow">OCEAN RESILIENCE / FAILURE REHEARSAL</div><h1>Weather Simulator<span>.</span></h1><p>Push the conditions. Break the formation. Work out what comes next.</p></div><button onClick={() => setShowPlan(!showPlan)} aria-expanded={showPlan}>Recovery & design rationale ↗</button></div>
+      <div className="w-heading"><div><div className="w-eyebrow">OCEAN RESILIENCE / FAILURE REHEARSAL</div><h1>{reasoning ? 'Muse Reasoning' : 'Weather Simulator'}<span>.</span></h1><p>{reasoning ? 'An expert coordinator on each master. Observe, reason, validate, act.' : 'Push the conditions. Break the formation. Work out what comes next.'}</p></div><button onClick={() => setShowPlan(!showPlan)} aria-expanded={showPlan}>Recovery & design rationale ↗</button></div>
+      {reasoning && <ReasoningPanel selectedNode={selected} onInject={inject} epoch={reasoningEpoch} state={state} conditions={conditions} scenario={scenario} designs={designs} onClear={()=>setState(s=>({...s,reasoningPolicy:undefined}))} onApply={(decision:Decision,input:Observation)=>{
+        const current=observe(state,conditions,scenario,designs,useStore.getState().config);
+        const rejected=validateDecision(decision,current);
+        if(rejected)return rejected;
+        if(signature(current)!==signature(input)||current.t-input.t>120||current.t<input.t)return 'Rejected stale snapshot; local policy retained.';
+        setState(s=>logEvent({...s,reasoningPolicy:{strategy:decision.strategy,searchRadiusM:decision.searchRadiusM,expiresAt:s.t+Math.min(120,decision.nextCheckS)}},`Muse strategy: ${decision.strategy} — ${decision.summary}`));
+        return `Executed ${decision.strategy}: bounded strategy sent to local controller. Dispatch remains subject to live feasibility checks.`;
+      }} />}
       <div className="w-tabs" role="tablist" aria-label="Weather scenarios" onKeyDown={e => {
         const index = SCENARIOS.findIndex(p => p.id === scenario);
         const next = e.key === 'ArrowRight' ? (index + 1) % 7 : e.key === 'ArrowLeft' ? (index + 6) % 7 : e.key === 'Home' ? 0 : e.key === 'End' ? 6 : -1;
         if (next >= 0) { e.preventDefault(); changeScenario(SCENARIOS[next].id); document.getElementById(`tab-${SCENARIOS[next].id}`)?.focus(); }
       }}>{SCENARIOS.map((p, i) => <button role="tab" tabIndex={scenario === p.id ? 0 : -1} aria-selected={scenario === p.id} aria-controls="weather-scenario" id={`tab-${p.id}`} key={p.id} onClick={() => changeScenario(p.id)}><span>0{i + 1}</span>{p.name}</button>)}</div>
       <section id="weather-scenario" role="tabpanel" aria-labelledby={`tab-${scenario}`}>
-        <div className="w-scenario"><div><span className="w-eyebrow">{preset.subtitle}</span><h2>{preset.question}</h2></div><div className="w-transport"><span className="w-clock">Day {sun.day} · {time(sun.hour*3600)}</span><button onClick={() => play(!playing)}>{playing ? 'Pause' : 'Play'}</button><select aria-label="Simulation speed" value={speed} onChange={e => setSpeed(Number(e.target.value))}>{[1, 10, 60, 600, 3600].map(v => <option key={v} value={v}>{v}×</option>)}</select><button onClick={() => { setState(createWeather(designs)); select('W01'); }}>Reset fleet</button></div></div>
+        <div className="w-scenario"><div><span className="w-eyebrow">{preset.subtitle}</span><h2>{preset.question}</h2></div><div className="w-transport"><span className="w-clock">Day {sun.day} · {time(sun.hour*3600)}</span><button onClick={() => play(!playing)}>{playing ? 'Pause' : 'Play'}</button><select aria-label="Simulation speed" value={speed} onChange={e => setSpeed(Number(e.target.value))}>{[1, 10, 60, 600, 3600].map(v => <option key={v} value={v}>{v}×</option>)}</select><button onClick={() => { setReasoningEpoch(v=>v+1); setState(createWeather(designs)); select('W01'); }}>Reset fleet</button></div></div>
         <div className="w-detail-switch" role="group" aria-label="Simulator detail level"><button aria-pressed={!detailOpen} onClick={()=>setDetailOpen(false)}>Fleet map</button><button aria-pressed={detailOpen} onClick={()=>setDetailOpen(true)}>3D recovery close-up</button><a href="#recovery-plan">Recovery plan ↓</a>{detailOpen && <label>Inspect node <select aria-label="Recovery node" value={selected} onChange={e=>select(e.target.value)}>{state.nodes.map(n=><option key={n.id} value={n.id}>{n.id} · {n.role}</option>)}</select></label>}</div>
         {detailOpen ? <RecoveryLab key={selected} design={designs[node.role]} nodeId={selected} swell={conditions.swell} inverted={node.inverted} ingress={node.ingress} liveRighting={node.righting} onClose={()=>setDetailOpen(false)} /> : <div className="w-workspace">
           <section className="w-map-panel" aria-label="Fleet simulation">

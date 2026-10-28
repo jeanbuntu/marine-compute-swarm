@@ -1,0 +1,46 @@
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { ReasoningPanel } from './ReasoningPanel';
+import { createWeather, SCENARIOS } from '../../model/weather';
+import { masterDesign,workerDesign } from '../../model/nodeDesign';
+import { demoDecision,observe } from '../../model/reasoning/harness';
+import { defaultConfig } from '../../model/config';
+const designs={master:masterDesign(),worker:workerDesign()},conditions=SCENARIOS[0].conditions;
+afterEach(()=>vi.unstubAllGlobals());
+test('demo makes no provider call and shadow mode never executes a proposal',async()=>{
+  const f=vi.fn().mockResolvedValue({json:async()=>({configured:false,model:'muse-wonder-1.0',endpoint:'https://api.meta.ai/v1/chat/completions'})});vi.stubGlobal('fetch',f);
+  const apply=vi.fn();render(<ReasoningPanel state={createWeather(designs)} conditions={conditions} scenario="day" designs={designs} onApply={apply} onClear={()=>{}} />);
+  fireEvent.click(screen.getByRole('button',{name:'Evaluate snapshot'}));
+  await screen.findByText(/Validated; shadow mode/);
+  expect(apply).not.toHaveBeenCalled();expect(f.mock.calls.every(call=>!call[1]?.method)).toBe(true);
+  expect(screen.getByText(/Deterministic rehearsal response/, {selector: 'p'})).toBeInTheDocument();
+});
+test('a delayed response cannot execute after fleet conditions change',async()=>{
+  const state=createWeather(designs),o=observe(state,conditions,'day',designs,defaultConfig());
+  let resolve:(value:unknown)=>void=()=>{};
+  const f=vi.fn().mockImplementation((_url,init)=>init?.method==='POST'?new Promise(r=>{resolve=r;}):Promise.resolve({json:async()=>({configured:true,model:'muse-wonder-1.0',endpoint:'https://api.meta.ai/v1/chat/completions'})}));vi.stubGlobal('fetch',f);
+  const apply=vi.fn(),props={state,conditions,scenario:'day' as const,designs,onApply:apply,onClear:()=>{}};
+  const {rerender}=render(<ReasoningPanel {...props} />);
+  await waitFor(()=>expect(f).toHaveBeenCalled());
+  fireEvent.change(screen.getByRole('combobox'),{target:{value:'Muse'}});
+  fireEvent.change(screen.getByLabelText('Dashboard access token'),{target:{value:'dashboard-token'}});
+  fireEvent.click(screen.getByLabelText('Execute validated strategies'));
+  await waitFor(()=>expect(screen.getByRole('button',{name:'Evaluate snapshot'})).not.toBeDisabled());
+  fireEvent.click(screen.getByRole('button',{name:'Evaluate snapshot'}));
+  rerender(<ReasoningPanel {...props} state={{...state,wildlife:true}} />);
+  resolve({ok:true,json:async()=>({decision:demoDecision(o),raw:'{}'})});
+  await screen.findByText(/Snapshot changed or expired/);expect(apply).not.toHaveBeenCalled();
+});
+test('returning to baseline cancels execution of an outstanding response',async()=>{
+  const state=createWeather(designs),o=observe(state,conditions,'day',designs,defaultConfig());
+  let resolve:(value:unknown)=>void=()=>{};
+  vi.stubGlobal('fetch',vi.fn().mockImplementation((_url,init)=>init?.method==='POST'?new Promise(r=>{resolve=r;}):Promise.resolve({json:async()=>({configured:true,model:'muse-wonder-1.0',endpoint:'https://api.meta.ai/v1/chat/completions'})})));
+  const apply=vi.fn(),clear=vi.fn();render(<ReasoningPanel state={state} conditions={conditions} scenario="day" designs={designs} onApply={apply} onClear={clear} />);
+  fireEvent.change(screen.getByRole('combobox'),{target:{value:'Muse'}});
+  fireEvent.change(screen.getByLabelText('Dashboard access token'),{target:{value:'dashboard-token'}});
+  fireEvent.click(screen.getByLabelText('Execute validated strategies'));
+  await waitFor(()=>expect(screen.getByRole('button',{name:'Evaluate snapshot'})).not.toBeDisabled());
+  fireEvent.click(screen.getByRole('button',{name:'Evaluate snapshot'}));
+  fireEvent.click(screen.getByRole('button',{name:'Return to baseline'}));
+  resolve({ok:true,json:async()=>({decision:demoDecision(o),raw:'{}'})});
+  await screen.findByText(/Snapshot changed or expired/);expect(apply).not.toHaveBeenCalled();expect(clear).toHaveBeenCalled();
+});

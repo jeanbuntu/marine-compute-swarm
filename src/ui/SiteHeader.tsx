@@ -4,6 +4,7 @@ export const SITE_PAGES = [
   { id: 'swarm', name: 'Swarm', href: '/', description: 'Project overview & live fleet' },
   { id: 'master', name: 'Master Unit Bench', href: '/?view=unit&role=master', description: 'Inspect the coordinator hardware' },
   { id: 'worker', name: 'Worker Unit Bench', href: '/?view=unit&role=worker', description: 'Inspect a worker node' },
+  { id: 'reasoning', name: 'Muse Reasoning', href: '/?view=reasoning', description: 'Inspect adaptive fleet decisions' },
   { id: 'weather', name: 'Weather Simulator', href: '/?view=weather', description: 'Weather, failures & recovery plans' },
   { id: 'master-recovery', name: 'Master Recovery Close-up', href: '/?view=weather&inspect=master', description: 'Explore the master righting mechanism' },
   { id: 'worker-recovery', name: 'Worker Recovery Close-up', href: '/?view=weather&inspect=worker', description: 'Explore worker recovery hardware' },

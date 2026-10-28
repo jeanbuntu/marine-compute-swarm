@@ -117,3 +117,9 @@ Capsize now triggers the proposed 60-second onboard righting sequence in the liv
 At 8%, the survivor idles nonessential loads while three healthy neighbors form an escort ring; the coordinator and remaining fleet accompany its drift. You can instead select Whole-fleet ring. The fleet waits through the daily sunrise and releases the survivor after 25% charge. The formation provides positioning and communications, without claiming to immobilize a powerless node or block currents and waves. Use 3600× playback to review a night-to-morning recovery.
 
 The 2D map always fits every node automatically. Its world-aligned grid and scale bar show changes in zoom and pan; manual Fit fleet and extent controls are removed.
+
+### Muse reasoning dashboard
+
+Open `?view=reasoning` or Menu → Muse Reasoning to inspect the fleet observation → escalation → Muse → validation → local execution pipeline. Inject failures using the same weather rehearsal controls below it. Local demo mode requires no credentials; shadow mode is the default. Enable automatic escalation and strategy execution separately to test the coordinator in the simulation.
+
+For live Meta calls, copy `.env.example` to `.env.local`, set `MODEL_API_KEY` and a private `MUSE_ACCESS_TOKEN`, then restart `npm run dev`. Select Meta Muse Wonder and enter only the dashboard access token in the page. `MUSE_MODEL` defaults to `muse-wonder-1.0`. Set the same environment variables in Vercel for deployed use. Never use a `VITE_` variable for secrets. See [harness design and limits](docs/design/2026-10-28-muse-reasoning-harness.md) for the action catalog, budgets, trace export and validation boundaries.

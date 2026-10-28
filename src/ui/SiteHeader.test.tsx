@@ -8,7 +8,7 @@ test('landing title bar exposes every page from a single discoverable menu',()=>
   expect(screen.queryByRole('navigation',{name:'Project navigation'})).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button',{name:'Project menu'}));
   const nav=screen.getByRole('navigation',{name:'Project navigation'});
-  expect(within(nav).getAllByRole('link')).toHaveLength(6);
+  expect(within(nav).getAllByRole('link')).toHaveLength(7);
   expect(within(nav).getByRole('link',{name:/Weather Simulator/})).toHaveAttribute('href','/?view=weather');
   expect(within(nav).getByRole('link',{name:/Master Recovery Close-up/})).toHaveAttribute('href','/?view=weather&inspect=master');
   expect(within(nav).getByRole('link',{name:/Worker Unit Bench/})).toHaveAttribute('href','/?view=unit&role=worker');

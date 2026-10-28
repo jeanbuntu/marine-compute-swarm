@@ -195,3 +195,11 @@ Production: https://marine-compute-swarm.vercel.app (Vercel project `marine-comp
 - Weather time now cycles daily: Day starts at 10:00, Night at 18:00, sunset at 18:00 and sunrise at 06:00, with a sinusoidal 850 W/m² peak before weather losses. It is not a location-based forecast. Night uses the same mild baseline conditions as Day so the comparison isolates sunlight. 3600× playback makes an overnight drill reviewable without resetting conditions.
 - `fleetMap.ts` continuously frames every node with symbol/label padding and equal x/y meter scale. The grid stays anchored in world coordinates with a dynamic meter spacing and scale bar. There are no manual extent, reset-fit or offscreen-node controls. Dragging captures the initial camera transform so auto-fit cannot feed back into pointer displacement.
 - Regression tests cover both roles' righting, spent and failed kits, overnight escort drift/contact/solar recovery, whole-fleet formation, camera bounds and live 3D synchronization.
+
+## Muse reasoning harness
+
+- `?view=reasoning` uses `WeatherApp` with `ReasoningPanel`, sharing the actual rehearsal state and injections. Shadow/demo mode defaults; live escalation and execution are separate opt-ins.
+- `src/model/reasoning/harness.ts` builds report-only observations, the exact prompt, strict decision schema and strategy checks. Disconnected truth positions and unreported battery/faults must never enter model inputs. Cloud counts are a separate seeded Swarm tracker advisory, not Weather PV or live weather.
+- `server/muse.ts` holds server-only Meta credentials, authenticated proxying, bounded output, timeout and process-local budget. Vite middleware and `api/muse.ts` expose `/api/muse`; `.env.example` documents `MODEL_API_KEY`, `MUSE_MODEL`, `MUSE_BASE_URL`, `MUSE_ACCESS_TOKEN`. No secret may use a `VITE_` prefix.
+- Model strategies expire within 120 simulation seconds and remain subordinate to local power, wildlife, damage and dispatch checks. No arbitrary executable search code or relaxed safety constraints. Defaults use `muse-wonder-1.0`; actual account access needs a live key test. Full is currently documented as Muse Code-only.
+- Design and remaining evaluation work: `docs/design/2026-10-28-muse-reasoning-harness.md`.
