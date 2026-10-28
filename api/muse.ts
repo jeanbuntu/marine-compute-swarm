@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { connection, reason } from '../server/muse';
+import { connection, reason } from '../server/muse.js';
 export default async function handler(req:IncomingMessage & {body?:unknown},res:ServerResponse) {
   res.setHeader('Cache-Control','no-store');
   if(req.method==='GET'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify(connection(process.env)));return;}

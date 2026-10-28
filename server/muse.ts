@@ -1,5 +1,5 @@
 import { timingSafeEqual } from 'node:crypto';
-import { decisionSchema, messages, observationSchema } from '../src/model/reasoning/harness';
+import { decisionSchema, messages, observationSchema } from '../src/model/reasoning/protocol.js';
 
 export interface MuseEnv { MODEL_API_KEY?:string; MUSE_MODEL?:string; MUSE_BASE_URL?:string; MUSE_ACCESS_TOKEN?:string; NODE_ENV?:string }
 export interface ApiResult { status:number; body:unknown }
