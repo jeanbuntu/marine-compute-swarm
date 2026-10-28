@@ -6,6 +6,7 @@ import { partPosition } from '../model/hydrostatics';
 import { useStore } from '../state/store';
 import { sim } from '../state/sim';
 import { evaluate } from '../model/hydrostatics';
+import { DimensionGuide } from './DimensionGuide';
 import { NodeModel } from './NodeModel';
 import { explodeOffsets, EXPLODE_FACTOR } from './explode';
 
@@ -33,6 +34,7 @@ function SwarmNode({ index }: { index: number }) {
   const design = useStore((s) => s.designs[role]);
   const hovered = useStore((s) => s.hoveredId);
   const exploded = useStore((s) => s.explodedNodeId === id);
+  const dimensions = useStore(s => s.inspectionDimensions);
   const inspectionExploded = useStore((s) => s.inspectionExploded);
   const separated = exploded && inspectionExploded;
   const selected = useStore((s) => s.selectedNodeId === id);
@@ -78,6 +80,7 @@ function SwarmNode({ index }: { index: number }) {
           <Line points={[[-0.5, 0, 0], [0.5, 0, 0]]} color="#edf5ed" lineWidth={2} />
           {[-0.5, 0, 0.5].map(x => <Line key={x} points={[[x, 0, -0.06], [x, 0, 0.06]]} color="#edf5ed" lineWidth={2} />)}
         </group>}
+        {exploded && dimensions && <DimensionGuide design={design} partId={selectedPart ?? 'hull-shell'} offsets={offsets} />}
         <NodeModel
           design={design}
           petals={sim.sky.sun(sim.timeS).ghiWm2 > 0 ? 'deployed' : 'stowed'}

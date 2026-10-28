@@ -43,3 +43,15 @@ describe('impact', () => {
     expect(b).toBeGreaterThan(a * 1.1);
   });
 });
+
+
+test('host and coordinator watts do not earn GPU throughput', () => {
+  const master = masterDesign(), worker = workerDesign();
+  const c = cfg({ nodes: 1, coverage: 0 });
+  const withoutCoordinatorLoad = { ...master, parts: master.parts.map(p => p.id === 'compute-2' ? { ...p, powerW: 0 } : p) };
+  const a = runScenario(c, 0.5, 11, { master, worker }).swarm.computeTflopH;
+  const b = runScenario(c, 0.5, 11, { master: withoutCoordinatorLoad, worker }).swarm.computeTflopH;
+  expect(a).toBeGreaterThan(0);
+  expect(a).toBeCloseTo(b, 8);
+  expect(a).toBeLessThanOrEqual(2 * 121 * 0.5 * c.usableComputeShare + 1e-7);
+});

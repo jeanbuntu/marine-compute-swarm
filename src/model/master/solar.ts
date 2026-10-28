@@ -47,10 +47,7 @@ export function decompose(clearGhiWm2: number, transmission: number, elevDeg: nu
   return { directWm2: dni, diffuseWm2: sinE > 0.02 ? ghi - dni * sinE : ghi, ghiWm2: ghi };
 }
 
-/** Outward horizontal directions of the four petals in the body frame (E, S, W, N). */
-export const PETAL_DIRS = { E: [1, 0, 0], S: [0, 0, 1], W: [-1, 0, 0], N: [0, 0, -1] } as const satisfies Record<string, V3>;
-export const PETAL_IDS = ['E', 'S', 'W', 'N'] as const;
-export type PetalId = (typeof PETAL_IDS)[number];
+export { PETAL_IDS, PETAL_DIRS, type PetalId } from '../hardware';
 
 /** Tilt is positive when the outer edge rises (matches the rendered model); the normal then leans back over the hull. */
 export function petalNormalBody(dir: readonly [number, number, number], tiltRad: number): V3 {

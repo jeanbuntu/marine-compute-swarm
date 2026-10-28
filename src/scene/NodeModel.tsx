@@ -1,5 +1,9 @@
+import { useMemo, useEffect } from 'react';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
+import { Shape, ShapeGeometry, ExtrudeGeometry } from 'three';
+import { GPU, PANEL_CORNER_M, PETAL_PAIRS, PETAL_IDS, PETAL_DIRS, petalGeometry, type PetalId } from '../model/hardware';
 import type { ThreeEvent } from '@react-three/fiber';
-import { BoxGeometry, CylinderGeometry, SphereGeometry, TorusGeometry, MeshStandardMaterial, CanvasTexture, DataTexture, RGBAFormat, SRGBColorSpace, LinearFilter, LinearMipmapLinearFilter, Vector3, Quaternion } from 'three';
+import { CylinderGeometry, SphereGeometry, TorusGeometry, MeshStandardMaterial, CanvasTexture, DataTexture, RGBAFormat, SRGBColorSpace, LinearFilter, LinearMipmapLinearFilter, Vector3, Quaternion } from 'three';
 import type { NodeDesign, Part, Subsystem } from '../model/parts';
 import { partPosition, PETAL_TILT_DEG, type PetalState } from '../model/hydrostatics';
 
@@ -9,7 +13,7 @@ const COLORS: Record<Subsystem, string> = {
   propulsion: '#26373c', navigation: '#e0e4dc', comms: '#e4e7e2', camera: '#26373c',
 };
 export const subsystemColor = (s: Subsystem) => COLORS[s];
-const box = new BoxGeometry(1, 1, 1);
+
 const cyl = new CylinderGeometry(1, 1, 1, 12);
 const dome = new SphereGeometry(1, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2);
 const ring = new TorusGeometry(1, 0.12, 6, 20);
@@ -24,7 +28,9 @@ function material(color: string, hot = false, ghost = false) {
   return mats.get(key)!;
 }
 export function Block({ at = [0, 0, 0], size, color = '#83969a', hot = false, ghost = false }: { at?: V3; size: V3; color?: string; hot?: boolean; ghost?: boolean }) {
-  return <mesh geometry={box} material={material(color, hot, ghost)} position={at} scale={size} />;
+  const geometry = useMemo(() => new RoundedBoxGeometry(...size, 3, Math.min(0.025, Math.min(...size) * 0.18)), [size[0], size[1], size[2]]);
+  useEffect(() => () => geometry.dispose(), [geometry]);
+  return <mesh geometry={geometry} material={material(color, hot, ghost)} position={at} />;
 }
 /** A real length of tube between mounting points, in meters. */
 export function Tube({ a, b, radius = 0.015, color = '#8e9b9d' }: { a: V3; b: V3; radius?: number; color?: string }) {
@@ -75,21 +81,76 @@ export function SolarPanel({ width, depth, thickness, hot }: { width: number; de
     {[-0.3, 0.3].map(z => <Block key={z} at={[0, -thickness / 2 - 0.012, depth * z]} size={[width, 0.024, 0.025]} color="#6f858c" />)}
   </group>;
 }
+function roundedOutline(width: number, radius: number) {
+  const h = width / 2, k = h - radius, s = new Shape();
+  s.moveTo(-k, -h); s.lineTo(k, -h); s.quadraticCurveTo(h, -h, h, -k);
+  s.lineTo(h, k); s.quadraticCurveTo(h, h, k, h); s.lineTo(-k, h);
+  s.quadraticCurveTo(-h, h, -h, k); s.lineTo(-h, -k); s.quadraticCurveTo(-h, -h, -k, -h);
+  return s;
+}
+function facetShape(length: number, inner: number, outer: number, inset = 0) {
+  const s = new Shape(), x0 = -length / 2 + inset, x1 = length / 2 - inset;
+  const wi = inner / 2 + (outer - inner) * inset / (2 * length) - inset;
+  const wo = outer / 2 - (outer - inner) * inset / (2 * length) - inset;
+  const points = [[x0,-wi],[x1,-wo],[x1,wo],[x0,wi]];
+  const radius = Math.max(0.004,PANEL_CORNER_M-inset);
+  const cuts = points.map((p,i) => {
+    const prev=points[(i+3)%4], next=points[(i+1)%4];
+    const along=(q: number[]) => { const len=Math.hypot(q[0]-p[0],q[1]-p[1]); return [p[0]+(q[0]-p[0])*radius/len,p[1]+(q[1]-p[1])*radius/len]; };
+    return { p, a: along(prev), b: along(next) };
+  });
+  s.moveTo(...cuts[0].a as [number,number]);
+  for (const cut of cuts) { s.lineTo(cut.a[0],cut.a[1]); s.quadraticCurveTo(cut.p[0],cut.p[1],cut.b[0],cut.b[1]); }
+  s.closePath(); return s;
+}
+export function FacetPanel({ design, hot = false, center = 0 }: { design: NodeDesign; hot?: boolean; center?: number }) {
+  const pg = petalGeometry(design);
+  const [frame, cells] = useMemo(() => {
+    const frame = new ExtrudeGeometry(facetShape(pg.length - 0.006, pg.innerWidth - 0.006, pg.outerWidth - 0.006), { depth: 0.044, bevelEnabled: true, bevelSize: 0.003, bevelThickness: 0.003, bevelSegments: 2, steps: 1 });
+    const cells = new ShapeGeometry(facetShape(pg.length, pg.innerWidth, pg.outerWidth, 0.018));
+    const pos = cells.attributes.position, uv = cells.attributes.uv;
+    for (let i = 0; i < pos.count; i++) uv.setXY(i, pos.getX(i) / pg.length + 0.5, pos.getY(i) / pg.outerWidth + 0.5);
+    return [frame, cells];
+  }, [pg.length, pg.innerWidth, pg.outerWidth]);
+  useEffect(() => () => { frame.dispose(); cells.dispose(); }, [frame, cells]);
+  return <group position={[center, 0, 0]}>
+    <mesh geometry={frame} material={material('#85989b', hot)} rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.022, 0]} />
+    <mesh geometry={cells} material={solarMaterial(pg.length, pg.outerWidth, hot)} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.026, 0]} />
+    {[-0.28, 0.28].map(t => <Block key={t} at={[pg.length * t, -0.038, 0]} size={[0.025, 0.025, pg.innerWidth + (pg.outerWidth - pg.innerWidth) * (t + 0.5) - 0.02]} color="#667c80" />)}
+  </group>;
+}
+function DeckPanel({ side, thickness, hot }: { side: number; thickness: number; hot: boolean }) {
+  const [frame, cells] = useMemo(() => {
+    const shape = (inset: number) => {
+      const s = new Shape(), radius = (side / 2 - inset) / Math.cos(Math.PI / 8);
+      for (let i = 0; i < 8; i++) { const a = (i + 0.5) * Math.PI / 4; if (!i) s.moveTo(radius * Math.cos(a), radius * Math.sin(a)); else s.lineTo(radius * Math.cos(a), radius * Math.sin(a)); }
+      s.closePath(); return s;
+    };
+    const cells = new ShapeGeometry(shape(0.018)), pos = cells.attributes.position, uv = cells.attributes.uv;
+    for (let i = 0; i < pos.count; i++) uv.setXY(i, pos.getX(i) / side + 0.5, pos.getY(i) / side + 0.5);
+    return [new ExtrudeGeometry(shape(0), { depth: thickness, bevelEnabled: false }), cells];
+  }, [side, thickness]);
+  useEffect(() => () => { frame.dispose(); cells.dispose(); }, [frame, cells]);
+  return <group>
+    <mesh geometry={frame} material={material('#95a6a6', hot)} rotation={[-Math.PI / 2, 0, 0]} position={[0, -thickness / 2, 0]} />
+    <mesh geometry={cells} material={solarMaterial(side, side, hot)} rotation={[-Math.PI / 2, 0, 0]} position={[0, thickness / 2 + 0.001, 0]} />
+  </group>;
+}
+
 /** Watertight shell drawn as walls, so inspection can reveal the equipment inside. */
 function Shell({ width, height, hot, ghost, keel = false }: { width: number; height: number; hot: boolean; ghost: boolean; keel?: boolean }) {
-  const t = 0.025, c = keel ? '#637d83' : '#d5dfe0';
+  const geometry = useMemo(() => {
+    const outline = roundedOutline(width, 0.08), inner = roundedOutline(width - 0.05, 0.055);
+    outline.holes.push(inner);
+    return new ExtrudeGeometry(outline, { depth: height, bevelEnabled: false, steps: 1, curveSegments: 6 });
+  }, [width, height]);
+  const cap = useMemo(() => new ExtrudeGeometry(roundedOutline(width, 0.08), { depth: 0.025, bevelEnabled: false, curveSegments: 6 }), [width]);
+  useEffect(() => () => { geometry.dispose(); cap.dispose(); }, [geometry, cap]);
+  const mat = material(keel ? '#637d83' : '#d5dfe0', hot, ghost);
   return <group>
-    {[-1, 1].map(s => <group key={s}>
-      <Block at={[s * (width - t) / 2, 0, 0]} size={[t, height, width]} color={c} hot={hot} ghost={ghost} />
-      <Block at={[0, 0, s * (width - t) / 2]} size={[width - 2 * t, height, t]} color={c} hot={hot} ghost={ghost} />
-      {!keel && <>
-        <Block at={[s * width / 2, height / 2 - 0.04, 0]} size={[0.035, 0.07, width + 0.04]} color="#334d54" ghost={ghost} />
-        <Block at={[0, height / 2 - 0.04, s * width / 2]} size={[width + 0.04, 0.07, 0.035]} color="#334d54" ghost={ghost} />
-        <Block at={[s * (width - 0.12) / 2, -height / 2 + 0.03, 0]} size={[0.12, 0.06, width]} color="#8ca1a6" ghost={ghost} />
-      </>}
-    </group>)}
-    {!keel && <Block at={[0, height / 2 - t / 2, 0]} size={[width, t, width]} color={c} hot={hot} ghost={ghost} />}
-    {keel && <Block at={[0, -height / 2 + t / 2, 0]} size={[width, t, width]} color={c} ghost={ghost} />}
+    <mesh geometry={geometry} material={mat} rotation={[-Math.PI / 2, 0, 0]} position={[0, -height / 2, 0]} />
+    <mesh geometry={cap} material={mat} rotation={[-Math.PI / 2, 0, 0]} position={[0, keel ? -height / 2 : height / 2 - 0.025, 0]} />
+    {!keel && [-1, 1].map(s => <Block key={s} at={[s * (width / 2 - 0.025), height / 2 - 0.05, 0]} size={[0.045, 0.06, width - 0.06]} color="#344b52" ghost={ghost} />)}
   </group>;
 }
 
@@ -106,6 +167,14 @@ export function NodeModel({ design, petals, offsets = {}, highlightId, hotAll, g
   const compute = design.parts.find(p => p.id === 'compute-pod');
   const exchanger = design.parts.find(p => p.id === 'heat-exchanger');
   return <group>
+    {!separated && PETAL_PAIRS.map((pair, i) => {
+      const root = design.hullSideM / 2, y = design.keelDepthM + design.hullDepthM - 0.035;
+      const [a, b] = pair.map(id => PETAL_DIRS[id]);
+      const start: V3 = [a[0] * root, y, a[2] * root], end: V3 = [b[0] * root, y, b[2] * root];
+      return <group key={i}><Tube a={start} b={end} radius={0.018} color="#526d71" />
+        <Block at={start} size={[0.09, 0.07, 0.09]} color="#82928a" /><Block at={end} size={[0.07, 0.06, 0.07]} color="#526d71" />
+      </group>;
+    })}
     {/* The equipment tray and keel rails are part of the hull assembly. */}
     <group position={offsets['hull-shell']}>
       {[-0.33, 0.33].map(x => <Block key={x} at={[x, design.keelDepthM + 0.035, 0]} size={[0.035, 0.04, design.hullSideM * 0.8]} color="#71868b" ghost={ghostShell} />)}
@@ -143,30 +212,18 @@ function PartMesh({ part: p, design: d, petals, offset = [0, 0, 0], hot, ghost, 
   if (id === 'hull-shell' || id === 'keel-pod') {
     content = <Shell width={id === 'hull-shell' ? side : side * 0.6} height={id === 'hull-shell' ? d.hullDepthM : d.keelDepthM} hot={hot} ghost={ghost} keel={id === 'keel-pod'} />;
   } else if (id.startsWith('petal-')) {
-    const dx = Math.sign(p.pos[0]), dz = Math.sign(p.pos[2]);
+    const tag = id.slice(6) as PetalId, dir = PETAL_DIRS[tag], pg = petalGeometry(d);
     const angle = petals === 'deployed' ? PETAL_TILT_DEG * Math.PI / 180 : 0;
-    const width = dx ? d.petalLengthM : side, depth = dz ? d.petalLengthM : side;
-    const rot: V3 = [dz ? -dz * angle : 0, 0, dx ? dx * angle : 0];
-    const hinge: V3 = [dx * side / 2, pos[1] - offset[1] - Math.sin(angle) * d.petalLengthM / 2, dz * side / 2];
-    const rel = (a: V3): V3 => a.map((v, i) => v - (pos[i] - offset[i])) as V3;
-    content = <>
-      <group rotation={rot}><SolarPanel width={width} depth={depth} thickness={0.05} hot={hot} /></group>
-      {petals === 'deployed' && <>
-        {[-0.34, 0.34].map(t => {
-          const h: V3 = [hinge[0] + (dz ? t * side : 0), hinge[1], hinge[2] + (dx ? t * side : 0)];
-          const root: V3 = [h[0], deck - 0.18, h[2]];
-          const tip: V3 = [h[0] + dx * d.petalLengthM * 0.62 * Math.cos(angle), h[1] + d.petalLengthM * 0.62 * Math.sin(angle) - 0.045, h[2] + dz * d.petalLengthM * 0.62 * Math.cos(angle)];
-          return <group key={t}>
-            <Tube a={rel([h[0], deck - 0.05, h[2]])} b={rel(h)} radius={0.023} />
-            <Tube a={rel([h[0] - (dz ? 0.09 : 0), h[1], h[2] - (dx ? 0.09 : 0)])} b={rel([h[0] + (dz ? 0.09 : 0), h[1], h[2] + (dx ? 0.09 : 0)])} radius={0.035} color="#344b52" />
-            {!separated && <Tube a={rel(root)} b={rel(tip)} radius={0.019} />}
-          </group>;
-        })}
-        {!separated && <Tube a={rel([hinge[0], deck + 0.015, hinge[2]])} b={rel([hinge[0] + dx * 0.3, hinge[1] + 0.04, hinge[2] + dz * 0.3])} radius={0.011} color="#202d31" />}
-      </>}
-    </>;
+    const yaw = -Math.atan2(dir[2], dir[0]);
+    content = <group rotation={[0, yaw, 0]}>
+      <group rotation={[0, 0, angle]}>
+        <FacetPanel design={d} hot={hot} center={pg.length / 2 - pg.centroid} />
+      </group>
+      <Block at={[-pg.centroid * Math.cos(angle), -pg.centroid * Math.sin(angle), 0]} size={[0.045, 0.05, pg.innerWidth]} color="#344b52" />
+      {!separated && PETAL_IDS.indexOf(tag) % 2 === 0 && <Tube a={[-pg.centroid * Math.cos(angle) - 0.12, -pg.centroid * Math.sin(angle) - 0.14, 0]} b={[(pg.length * 0.65 - pg.centroid) * Math.cos(angle), (pg.length * 0.65 - pg.centroid) * Math.sin(angle) - 0.05, 0]} radius={0.018} />}
+    </group>;
   } else if (id === 'deck-pv') {
-    content = <SolarPanel width={side * 0.9} depth={side * 0.9} thickness={p.size[1]} hot={hot} />;
+    content = <DeckPanel side={side} thickness={p.size[1]} hot={hot} />;
   } else if (id.startsWith('thruster-')) {
     const a = Math.atan2(p.pos[0], p.pos[2]);
     content = <group rotation={[0, a, 0]}>
@@ -188,6 +245,14 @@ function PartMesh({ part: p, design: d, petals, offset = [0, 0, 0], hot, ghost, 
       <Label text={id === 'battery' ? 'LFP / 12 kWh' : 'LFP / 6 kWh'} width={w * 0.7} at={[0, h / 2 + 0.002, z * 0.12]} top />
       {[-0.38, 0.38].map(x => <Block key={x} at={[w * x, -h / 2 - 0.008, 0]} size={[0.035, 0.016, z]} color="#889c9f" />)}
     </>;
+  } else if (id.startsWith('gpu-')) {
+    content = <>
+      <Block size={p.size} color="#313c3b" hot={hot} />
+      <Block at={[-p.size[0] / 2 - 0.001, 0, 0]} size={[0.002, GPU.heightM, GPU.lengthM]} color="#315e49" />
+      <Block at={[0, -GPU.heightM / 2 + 0.005, 0]} size={[0.002, 0.01, 0.09]} color="#bd984f" />
+      {Array.from({ length: 10 }, (_, i) => <Block key={i} at={[0, GPU.heightM / 2 + 0.0005, -GPU.lengthM * 0.42 + i * GPU.lengthM * 0.09]} size={[p.size[0] * 0.85, 0.001, 0.002]} color="#98a596" />)}
+      <group position={[p.size[0] / 2 + 0.001, 0, 0]} rotation={[0, Math.PI / 2, 0]}><Label text="NVIDIA L4" width={0.13} at={[0, 0, 0]} /></group>
+    </>;
   } else if (p.subsystem === 'compute') {
     const [w, h, z] = p.size;
     content = <>
@@ -199,11 +264,8 @@ function PartMesh({ part: p, design: d, petals, offset = [0, 0, 0], hot, ghost, 
       <Block at={[0, h / 2 - 0.008 + (separated ? 0.12 : 0), 0]} size={[w + 0.012, 0.016, z + 0.012]} color="#c0cacc" hot={hot} />
       {separated && <>
         <Block at={[0, 0.005, 0]} size={[w * 0.92, 0.014, z * 0.88]} color="#264d42" />
-        {(id === 'compute-pod' ? [-1, 1] : [0]).map(s => <group key={s} position={[s * w * 0.23, 0.04, 0]}>
-          <Block size={[w * 0.38, 0.05, z * 0.72]} color="#394b50" />
-          <Block at={[0, 0.026, 0]} size={[w * 0.35, 0.008, z * 0.65]} color="#a3b4b6" />
-          <Label text={id === 'compute-pod' ? 'GPU' : 'HOST'} width={w * 0.28} at={[0, 0.031, 0]} top />
-        </group>)}
+        <Block at={[w * 0.28, 0.025, 0]} size={[w * 0.22, 0.03, z * 0.6]} color="#9caca7" />
+        <Label text="HOST" width={w * 0.22} at={[w * 0.28, 0.042, 0]} top />
       </>}
       {Array.from({ length: 8 }, (_, i) => <Block key={i} at={[-w * 0.42 + i * w * 0.12, 0, -z / 2 - 0.006]} size={[0.012, h * 0.72, 0.02]} color="#546c73" />)}
       <Label text={id === 'compute-pod' ? 'COMPUTE / 2 GPU' : 'COORDINATOR'} at={[0, h / 2 + 0.001 + (separated ? 0.12 : 0), 0]} width={w * 0.9} top />

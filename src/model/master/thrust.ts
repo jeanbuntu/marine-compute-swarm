@@ -1,3 +1,4 @@
+import { petalGeometry } from '../hardware';
 import { G, RHO_AIR, RHO_SEA } from '../constants';
 import { CD, FRONTAL_M2, PROP_EFF } from '../swarm';
 import type { NodeDesign } from '../parts';
@@ -77,7 +78,7 @@ export function currentDragN(relVelMs: [number, number]): [number, number] {
 /** Wind force on the freeboard, mast and raised petals. windMs is the speed, windToward the scene-plane direction it blows toward. */
 export function windForceN(windMs: number, toward: [number, number], d: NodeDesign, freeboardM: number, tiltsDeg: number[]): [number, number] {
   const mast = d.parts.filter((p) => p.pos[1] > d.keelDepthM + d.hullDepthM && !p.id.startsWith('petal-')).reduce((s, p) => s + p.size[0] * Math.max(0, p.size[1]), 0);
-  const petals = tiltsDeg.reduce((s, t) => s + d.hullSideM * d.petalLengthM * Math.sin(Math.max(0, t) * Math.PI / 180) * 0.5, 0);
+  const petals = tiltsDeg.reduce((s, t) => s + petalGeometry(d).area * Math.sin(Math.max(0, t) * Math.PI / 180) * 0.5, 0);
   const area = Math.max(0, freeboardM) * d.hullSideM + mast + petals;
   const f = 0.5 * RHO_AIR * CD_WIND * area * windMs * windMs;
   return [f * toward[0], f * toward[1]];

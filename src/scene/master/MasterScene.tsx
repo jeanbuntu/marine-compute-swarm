@@ -1,7 +1,7 @@
 import { useRef } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Canvas, events, useFrame } from '@react-three/fiber';
 import type { DirectionalLight, HemisphereLight } from 'three';
-import { msim, useMaster } from '../../state/master';
+import { layoutRects, msim, useMaster } from '../../state/master';
 import { Clouds } from '../Clouds';
 import { FlowParticles } from './FlowParticles';
 import { MasterCamera } from './MasterCamera';
@@ -39,7 +39,14 @@ function Lights() {
 
 export function MasterScene() {
   return (
-    <Canvas flat gl={{ antialias: true }} dpr={[1, 2]} camera={{ position: [3, 1.5, 3.4], fov: 50, near: 0.05, far: 60000 }}>
+    <Canvas events={state => ({ ...events(state), compute(event, state) {
+      const ui = useMaster.getState(), rect = layoutRects(state.size.width, state.size.height, ui.view, ui.pip).scene;
+      const bounds = state.gl.domElement.getBoundingClientRect();
+      const x = event.clientX - bounds.left, y = event.clientY - bounds.top;
+      if (!rect || x < rect.x || x > rect.x + rect.w || y < rect.y || y > rect.y + rect.h) state.pointer.set(10000, 10000);
+      else state.pointer.set(2 * (x - rect.x) / rect.w - 1, 1 - 2 * (y - rect.y) / rect.h);
+      state.raycaster.setFromCamera(state.pointer, state.camera);
+    } })} gl={{ antialias: true }} dpr={[1, 2]} camera={{ position: [3, 1.5, 3.4], fov: 50, near: 0.05, far: 60000 }}>
       <MasterDriver />
       <Lights />
       <SkyDome />

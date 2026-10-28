@@ -27,15 +27,15 @@ Optional starting view from the address bar: `?cam=x,y,z&target=x,y,z&explode=n0
 - **Stays afloat:** every part has a mass and a position. Draft, freeboard, reserve buoyancy, metacentric height and wind heel are computed live, with petals deployed and stowed. An edit that would sink the node or tip it over is blocked, and the app recommends which other knobs to change so the value you want can work.
 - **Sky camera:** selecting a node shows what its sky camera sees, with tracked clouds boxed and their motion drawn as arrows, plus the navigator's current decision and reason.
 
-## Master node bench
+## Unit bench · master and worker
 
-Open `?view=master` (or the link on the first screen) for a view of the master node alone, simulated in much finer detail. Waves move the hull and the water, and the four petals tilt individually to track the sun, with the angle, rate and power gain over fixed petals shown live. Pin the sun anywhere, change the sea state, wind and current, and watch the thrusters, their jets and flow particles as the node holds station or moves. A fisheye sky camera, which sees the node's own petals and mast, comes with ground truth, a simulated segmenter, tracking scores, and frame export and detection import for running SAM offline.
+Open `?view=unit&role=master` or `?view=unit&role=worker` (or the link on the first screen) for a single unit simulated in much finer detail. The Master / Worker switch changes the actual equipment and simulation mass; `?view=master` remains a compatible master-only entry point. Use **Dimensions** to select any component and show its physical envelope in millimeters. **Focus component** pauses, opens the exploded assembly, and moves the camera to the selected item. **Explode / Assemble** works on either role. Conditions and Analysis are collapsible, with bottom panels in narrow windows. Waves move the hull and the water, and the eight petals tilt in four mechanically linked pairs to track the sun, with the angle, rate and power gain over fixed petals shown live. Pin the sun anywhere, change the sea state, wind and current, and watch the thrusters, their jets and flow particles as the node holds station or moves. A fisheye sky camera, which sees the node's own petals and mast, comes with ground truth, a simulated segmenter, tracking scores, and frame export and detection import for running SAM offline.
 
 Live at https://solar-swarm.vercel.app.
 
 ## The node
 
-Every node has a sealed square hull with a keel pod, four hinged PV petals, a battery and compute pod low in the keel, a seawater heat exchanger, four fixed 45° corner thrusters that move the node in any direction without steering parts, GNSS, an IMU, a sky camera and a mesh radio.
+Every node has a sealed square hull with a keel pod, eight tapered PV petals in four linked pairs, a battery and compute pod low in the keel, a seawater heat exchanger, four fixed 45° corner thrusters that move the node in any direction without steering parts, GNSS, an IMU, a sky camera and a mesh radio.
 
 One **master node** near the center also carries the swarm's only Starlink terminal on a mast above the petals, a second GNSS, extra battery and the coordinator. Workers link to it over the mesh radio.
 
@@ -62,3 +62,19 @@ src/workers/  impact worker
 docs/design/  design document
 docs/plans/   implementation plan
 ```
+
+## Hardware reference
+
+Both views render the same eight-facet octagonal PV ring, radiused hull and equipment model at one scene unit per metre. Four adjacent pairs share geared drive concepts. Panel area uses the tapered shape and cell borders; panel mass and wind area use the full faces. The hull is 1.60 m wide with 80 mm corner radii, included in displacement and waterplane inertia.
+
+Every unit carries two **NVIDIA L4 24 GB** cards. NVIDIA's [PB-11316-001 v01, Fig. 4](https://www.nvidia.com/content/dam/en-zz/Solutions/Data-Center/l4/PB-11316-001_v01.pdf) gives a nominal 168.54 mm board length and 68.90 mm board height, used directly in the geometry. The 20.32 mm thickness is a single-slot installation allowance, not a measured card thickness. Each card draws up to 72 W; host/cooling adds an estimated 136 W. The sealed host enclosure is derived from the cards plus estimated host, connector, cold-plate and service space. Batteries, cooling and stability also constrain the hull; a small GPU does not imply a small floating platform. The stock passive L4 requires system airflow; the sealed cooling integration still needs thermal validation.
+
+Linkage and folding remain mechanical concepts. The unit bench reports estimated gravity-load actuator demand with 55% drive efficiency, plus 6 W overhead per moving drive; it gives no counterbalance credit. Swarm energy assumes 6 W average per paired drive (roughly 10% duty), totaling 24 W. These are different operating assumptions, not a claim that extra panel area has no actuation cost. Deployed panel motion now has a conservative frame-and-rail clearance interlock. Self-shading, folding mechanics and wind/wave torque on the drives are not validated.
+
+Compute estimates count the two GPU cards only, using 121 dense FP16 Tensor TFLOPS per L4 from NVIDIA's [Ada whitepaper, Appendix D](https://images.nvidia.com/aem-dam/Solutions/geforce/ada/nvidia-ada-gpu-architecture.pdf). Host and coordinator power are overhead. Delivered utilization, linear throughput versus power, rental pricing and annualization remain scenario estimates rather than measured performance.
+
+## Panel travel clearance
+
+The eight petals no longer use outlines that tile only when flat. Their edges reserve the swept space needed for independent ±30° travel, with rounded 40 mm corner setbacks. Larger angles remain available up to the mechanical stop, but `petalClearance.ts` checks conservative convex prisms enclosing the frame, glass and underside rails for every pair of panels. Separating-axis checks and a vertex-displacement bound certify the entire swept move; the linked drives stop at a 12 mm operating clearance, with an 8 mm guaranteed swept-clearance floor. The analysis panel reports this interlock and PV output uses the actual stopped angles. This is a deployed panel-envelope check, not validation of the detailed gearbox, actuator or folding mechanism.
+
+Collecting area includes the narrower outline, cell inset and rounded corner cutouts. Static swarm/inspection geometry uses the same outline. The simplified stowed stack uses 100 mm layer spacing to clear the rails; folding transitions are still not simulated.

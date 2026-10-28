@@ -42,7 +42,7 @@ There is no linter configured.
 Three layers, dependencies pointing downward only.
 
 1. **`src/model/`: pure TypeScript, no DOM, fully unit tested.** All randomness is a seeded mulberry32 RNG, so runs are reproducible.
-   - `parts.ts`, `nodeDesign.ts`: a node is a list of parts (mass, position, size, power, cost, rationale), origin at keel bottom centre, y up. `workerDesign()` is about 563 kg. `masterDesign()` is about 664 kg and adds the Starlink terminal and mast, a second GNSS, a second battery and a second compute module. The hull is 1.52 m square with 4 petals tilted 20° and 4 thrusters at 45° in an X layout.
+   - `parts.ts`, `nodeDesign.ts`: a node is a list of parts (mass, position, size, power, cost, rationale), origin at keel bottom centre, y up. `workerDesign()` and `masterDesign()` derive their current mass from the parts list; see `evaluateWorst` and adds the Starlink terminal and mast, a second GNSS, a second battery and a second compute module. The hull is 1.60 m wide with 80 mm radiused corners and 8 tapered petals tilted 20° and 4 thrusters at 45° in an X layout.
    - `hydrostatics.ts`: floating checks, worst of deployed and stowed. Thresholds: reserve buoyancy ≥ 50%, GM ≥ 0.15 m, heel ≤ 10°, freeboard > 0, seawater 1025 kg/m³.
    - `solver.ts`: `applyEdit`. A requested knob change is accepted if stable (`ok`). Otherwise it searches up to 3 other knobs over a 9-point grid for the smallest normalized change that restores stability (`recommend`), else returns `infeasible` with a bisected `closest` value.
    - `power.ts`, `sky.ts`, `tracker.ts`, `navigator.ts`, `swarm.ts`, `impact.ts`, `config.ts`: power balance, wrapping 24 km sky with moving clouds and projected shadows, cloud tracking, navigation, swarm dynamics, and the scenario comparison (zod config).
@@ -70,7 +70,7 @@ Three layers, dependencies pointing downward only.
 
 Everything in the 15-task V1 plan (`docs/plans/2026-10-26-solar-swarm-v1.md`) is implemented. Design doc: `docs/design/2026-10-26-solar-swarm-v1-design.md`.
 
-Status at last check: `tsc` clean, 32 test files / 193 tests passing, production build succeeds.
+Status at last check: `tsc` clean, 35 test files / 211 tests passing, production build succeeds.
 
 Verified in headless Chrome (software GL) by screenshots and real mouse events:
 - Ocean, clouds and cloud shadows render.
@@ -128,3 +128,22 @@ Production: https://solar-swarm.vercel.app (Vercel project `solar-swarm`, linked
 - Assembled/exploded inspection is controlled by `inspectionExploded`. Impact is collapsed while inspecting to keep the hardware visible.
 - `CameraRig` explicitly enables screen-space panning. Shift + left-drag and right-drag pan; user input cancels automatic focus, and subsequent following adds only node displacement so manual offsets persist (`cameraFollow.ts`).
 - Playback includes 1×, 2× and 5×.
+
+## Shared unit hardware update
+
+- `src/model/hardware.ts` is the common source for L4 nominal dimensions and single-slot allowance, GPU-derived enclosure size, eight compass directions, paired drives, trapezoid geometry/centroid, octagonal deck area, and rounded hull section area/inertia.
+- Swarm and unit views use the same `NodeModel` / `FacetPanel`. Hull wall corners are radiused 80 mm; equipment boxes use proportionate fillets. Full-size L4 cards are distinct parts, with their 72 W loads separate from the 136 W host allowance.
+- Use `?view=unit&role=master|worker`; old `?view=master` still works. `useMaster.setRole` resets motion and changes the actual design. Shared store edits rebuild the unit model. Conditions and analysis panels are collapsible. `layoutRects` supplies rendering, picking and dimension-label coordinates for the same responsive viewport.
+- Dimension inspection is available in both the swarm inspector and unit bench. The unit bench supports exploded inspection and Focus component; these pause physics. Camera presets frame the raised exploded assembly.
+- Petal targets optimize paired irradiance, so E/SE, S/SW, W/NW, N/NE share tilt and rate limits. Ideal PV remains an independent-facet upper bound. Collecting area excludes panel borders; wind and mass use gross panel area. Hydrostatic mass positions use trapezoid centroids.
+- GPU reference: NVIDIA PB-11316-001 v01 Fig. 4, 168.54 × 68.90 mm board; 20.32 mm is a slot allowance. Enclosure, host, cooling, actuator efficiency, linkage, and folding are estimates/concepts. Stock L4 system airflow and the proposed sealed cooling integration need thermal validation. No counterbalance credit or mechanically validated collision-free folding is claimed.
+- Swarm actuator loads are 6 W average per pair (24 W total, estimated duty). Unit actuator telemetry estimates instantaneous gravity load at commanded rate plus motor overhead; it excludes wind/wave drive torque. Treat these as distinct assumptions.
+
+- Impact throughput is capped by the `gpu-*` card power only (121 dense FP16 Tensor TFLOPS per 72 W L4; Ada whitepaper Appendix D). Host/coordinator power is overhead, not additional GPU throughput. Historical absolute compute/revenue findings above predate this correction and must be recomputed.
+
+## Panel intersection correction
+
+- `petalGeometry` now reserves swept edge space for any independent ±30° pose, rather than flat tiling. `FacetPanel` rounds the corners with quadratic curves (40 mm edge setbacks); the collecting area subtracts those same corner cutouts. Underside rails are inset within the collision envelope.
+- `src/model/master/petalClearance.ts` checks all 28 panel pairs with convex-prism SAT, including glass/frame/rail thickness. `limitPetalMotion` certifies the whole angular path using a vertex-displacement bound and adaptive subdivision, with an 8 mm swept-clearance floor and a 12 mm operating margin that allows reversal away from a stop. It clips the complete linked-drive step before contact, preserves paired angles, and reports `collisionLimited` in telemetry. Do not bypass this check in the live simulation or check only the destination pose.
+- Greater travel up to ±75° is conditional on the neighboring geometry. The analysis UI displays the clearance interlock; PV uses actual limited angles and stopped drives consume no modeled actuation power. An ideal independent-facet PV upper bound remains theoretical.
+- Stowed layer pitch is 100 mm to clear the lower rails. This corrects static stack separation; it does not establish a physical folding sequence. Detailed linkage interference and self-shadowing remain unvalidated.

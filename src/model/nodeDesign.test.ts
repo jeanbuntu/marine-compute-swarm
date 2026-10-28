@@ -1,4 +1,5 @@
 import { workerDesign, masterDesign, partMassKg, pvAreaM2, partEnvelope } from './nodeDesign';
+import { petalGeometry, deckAreaM2 } from './hardware';
 import type { Subsystem } from './parts';
 
 const subsystems = (d: ReturnType<typeof workerDesign>) => new Set(d.parts.map((p) => p.subsystem));
@@ -11,9 +12,9 @@ describe('node designs', () => {
     for (const r of required) expect(s.has(r)).toBe(true);
   });
 
-  test('worker has four petals and four thrusters', () => {
+  test('worker has eight petals and four thrusters', () => {
     const d = workerDesign();
-    expect(d.parts.filter((p) => p.id.startsWith('petal-')).length).toBe(4);
+    expect(d.parts.filter((p) => p.id.startsWith('petal-')).length).toBe(8);
     expect(d.parts.filter((p) => p.id.startsWith('thruster-')).length).toBe(4);
   });
 
@@ -40,10 +41,9 @@ describe('node designs', () => {
     }
   });
 
-  test('worker PV area is 7.5 to 10.5 m2', () => {
+  test('worker PV area matches its tapered faces and octagonal deck', () => {
     const a = pvAreaM2(workerDesign());
-    expect(a).toBeGreaterThanOrEqual(7.5);
-    expect(a).toBeLessThanOrEqual(10.5);
+    expect(a).toBeCloseTo(8 * petalGeometry(workerDesign()).activeArea + 0.8 * deckAreaM2(workerDesign()));
   });
 
   test('Starlink sits above the deck on a mast', () => {
@@ -76,7 +76,7 @@ test('dimension readouts follow edited hull and panel geometry', () => {
   const d = { ...workerDesign(), hullSideM: 2, hullDepthM: 1.2, petalLengthM: 1.6 };
   const size = (id: string) => partEnvelope(d, d.parts.find(p => p.id === id)!);
   expect(size('hull-shell')).toEqual([2, 1.2, 2]);
-  expect(size('petal-E')).toEqual([1.6, 0.05, 2]);
-  expect(size('petal-N')).toEqual([2, 0.05, 1.6]);
-  expect(size('deck-pv')).toEqual([1.8, 0.04, 1.8]);
+  expect(size('petal-E')).toEqual([petalGeometry(d).outerWidth, 0.05, 1.6]);
+  expect(size('petal-N')).toEqual(size('petal-E'));
+  expect(size('deck-pv')).toEqual([2, 0.04, 2]);
 });

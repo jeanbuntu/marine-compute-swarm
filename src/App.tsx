@@ -11,7 +11,7 @@ import { NodeCameraPanel } from './ui/NodeCameraPanel';
 import './ui/styles.css';
 
 export function App() {
-  if (typeof window !== 'undefined' && readView(window.location.search) === 'master') return <MasterApp />;
+  if (typeof window !== 'undefined' && readView(window.location.search) !== 'swarm') return <MasterApp />;
   const webgl = hasWebGL();
   return (
     <div style={{ position: 'fixed', inset: 0, background: '#0b1630' }}>

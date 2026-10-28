@@ -10,10 +10,10 @@ describe('applyEdit', () => {
   });
 
   test('an unstable battery edit returns a recommendation that works', () => {
-    const o = applyEdit(workerDesign(), { partId: 'battery', field: 'massKg', value: 1200 });
+    const o = applyEdit(workerDesign(), { partId: 'battery', field: 'massKg', value: 1600 });
     expect(o.status).toBe('recommend');
     if (o.status !== 'recommend') return;
-    expect(o.changes[0]).toEqual({ partId: 'battery', field: 'massKg', value: 1200 });
+    expect(o.changes[0]).toEqual({ partId: 'battery', field: 'massKg', value: 1600 });
     expect(o.changes.length).toBeGreaterThan(1);
     expect(o.message).toMatch(/hydrodynamic stability/);
     expect(evaluateWorst(o.design).ok).toBe(true);
@@ -40,7 +40,7 @@ describe('applyEdit', () => {
   test('the input design is never mutated by a recommendation', () => {
     const d = workerDesign();
     const before = JSON.stringify(d);
-    applyEdit(d, { partId: 'battery', field: 'massKg', value: 1200 });
+    applyEdit(d, { partId: 'battery', field: 'massKg', value: 1600 });
     expect(JSON.stringify(d)).toBe(before);
   });
 });

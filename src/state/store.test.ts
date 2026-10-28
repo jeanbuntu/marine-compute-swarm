@@ -23,17 +23,17 @@ describe('ui defaults', () => {
 describe('design edits', () => {
   test('unstable edit leaves the design unchanged and stores the recommendation', () => {
     const before = JSON.stringify(useStore.getState().designs.worker);
-    const o = useStore.getState().applyDesignEdit('worker', { partId: 'battery', field: 'massKg', value: 1200 });
+    const o = useStore.getState().applyDesignEdit('worker', { partId: 'battery', field: 'massKg', value: 1600 });
     expect(o.status).toBe('recommend');
     expect(JSON.stringify(useStore.getState().designs.worker)).toBe(before);
     expect(useStore.getState().lastOutcome?.outcome.status).toBe('recommend');
   });
 
   test('accepting the recommendation applies a stable design', () => {
-    useStore.getState().applyDesignEdit('worker', { partId: 'battery', field: 'massKg', value: 1200 });
+    useStore.getState().applyDesignEdit('worker', { partId: 'battery', field: 'massKg', value: 1600 });
     useStore.getState().acceptRecommendation();
     const d = useStore.getState().designs.worker;
-    expect(d.parts.find((p) => p.id === 'battery')!.massKg).toBe(1200);
+    expect(d.parts.find((p) => p.id === 'battery')!.massKg).toBe(1600);
     expect(evaluateWorst(d).ok).toBe(true);
     expect(useStore.getState().lastOutcome).toBeNull();
   });

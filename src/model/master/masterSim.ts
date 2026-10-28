@@ -1,3 +1,5 @@
+import { limitPetalMotion } from './petalClearance';
+import { petalGeometry, deckAreaM2 } from '../hardware';
 import { G } from '../constants';
 import { evaluate } from '../hydrostatics';
 import { masterDesign } from '../nodeDesign';
@@ -6,7 +8,7 @@ import { PV_EFFICIENCY, MPPT_EFFICIENCY, pvPowerW } from '../power';
 import { mulberry32 } from '../rng';
 import { makeSky, type Sky } from '../sky';
 import { initialHull, hullProps, stepHull, type HullProps, type HullState } from './hull';
-import { actuate, defaultActuator, limitHeel, petalTargets, staticHeel, tiltLimits, uniformTilts, STOW_WIND_MS, type ActuatorSettings, type Strategy, type Tilts } from './petals';
+import { actuate, actuatorDemandW, defaultActuator, limitHeel, petalTargets, staticHeel, tiltLimits, uniformTilts, STOW_WIND_MS, type ActuatorSettings, type Strategy, type Tilts } from './petals';
 import { PETAL_DIRS, PETAL_IDS, bodyToWorld, decompose, petalIrradiance, planeIrradiance, petalNormalBody, sunVector, type Attitude, type Irradiance, type V3 } from './solar';
 import { allocate, currentDragN, thrusterPowerW, thrustersFromDesign, windForceN, MAX_THRUST_N, type Layout } from './thrust';
 import { makeSea, SEA_PRESETS, type Sea, type SeaParams } from './waves';
@@ -50,15 +52,16 @@ export interface Telemetry {
   pv: { actualW: number; fixedW: number; flatW: number; idealW: number; swarmModelW: number; deckW: number };
   prop: { u: number[]; powerW: number; thrustN: number; posErrM: number; speedMs: number; yawAuthority: boolean; saturated: boolean;
     env: { current: [number, number]; wind: [number, number]; drift: [number, number] }; force: [number, number]; yawTargetDeg: number | null; yawBestGainPct: number };
+  collisionLimited: boolean;
   actuatorW: number; demandDegS: number;
 }
 
 export function pvBreakdown(d: NodeDesign, att: Attitude, tilts: Tilts, sun: V3, irr: Irradiance) {
-  const k = PV_EFFICIENCY * MPPT_EFFICIENCY, petalArea = d.petalLengthM * d.hullSideM;
+  const k = PV_EFFICIENCY * MPPT_EFFICIENCY, petalArea = petalGeometry(d).activeArea;
   let petals = 0;
   for (const id of PETAL_IDS) petals += petalArea * k * petalIrradiance(att, PETAL_DIRS[id], tilts[id], sun, irr);
   const deckN = bodyToWorld(att, [0, 1, 0]);
-  const deck = 0.8 * d.hullSideM * d.hullSideM * k * planeIrradiance(deckN, sun, irr);
+  const deck = 0.8 * deckAreaM2(d) * k * planeIrradiance(deckN, sun, irr);
   return { petals, deck, total: petals + deck };
 }
 
@@ -86,6 +89,7 @@ export class MasterSim {
   private attBuf: { t: number; a: Attitude }[] = [];
   private noisyAtt: Attitude = { yaw: 0, pitch: 0, roll: 0 };
   private yawTarget: number | null = null; private yawGain = 0;
+  private collisionLimited = false;
   private movedDeg = 0; private demand = 0; private prevIdeal: Tilts = uniformTilts(20);
   private driftFilt: [number, number] = [0, 0];
 
@@ -156,14 +160,17 @@ export class MasterSim {
       this.noisyAtt = { yaw: old.yaw + gauss(this.rnd) * n * 0.2, pitch: old.pitch + gauss(this.rnd) * n, roll: old.roll + gauss(this.rnd) * n };
       const ctx = { att: this.noisyAtt, sun, irr, minDeg: lim.minDeg, maxDeg: lim.maxDeg, winterStow: stowed };
       this.targets = limitHeel(d, petalTargets(p.strategy, ctx), hp.gmM);
-      this.ideal = petalTargets('track', { ...ctx, att, minDeg: -89, maxDeg: 89, winterStow: false });
+      this.ideal = petalTargets('track', { ...ctx, att, minDeg: -89, maxDeg: 89, winterStow: false }, false);
       let dem = 0;
       for (const id of PETAL_IDS) dem = Math.max(dem, Math.abs(this.ideal[id] - this.prevIdeal[id]) / ctlDt);
       this.demand += (dem - this.demand) * 0.15;
       this.prevIdeal = this.ideal;
     }
     const act = actuate(this.tilts, this.targets, dt, p.actuator.rateDegS, lim.minDeg, lim.maxDeg);
-    this.tilts = act.tilts; this.movedDeg += act.movedDeg;
+    const travel = limitPetalMotion(d,this.tilts,act.tilts);
+    this.collisionLimited = travel.limited;
+    this.movedDeg += act.movedDeg * travel.fraction;
+    this.tilts = travel.angles;
 
     // --- environment forces and station keeping (world frame, x east / z south) ---
     const cur: [number, number] = [p.currentEastMs, -p.currentNorthMs];
@@ -244,7 +251,7 @@ export class MasterSim {
 
   /** Upper bound for tilt-only control: each petal at its best unclamped angle for the true attitude, never stowed. */
   private idealPv(att: Attitude, sun: V3, irr: Irradiance): number {
-    const t = petalTargets('track', { att, sun, irr, minDeg: -89, maxDeg: 89, winterStow: false });
+    const t = petalTargets('track', { att, sun, irr, minDeg: -89, maxDeg: 89, winterStow: false }, false);
     return pvBreakdown(this.design, att, t, sun, irr).total;
   }
 
@@ -285,7 +292,8 @@ export class MasterSim {
         env: la?.env ?? { current: [0, 0], wind: [0, 0], drift: [0, 0] }, force: F, yawTargetDeg: this.yawTarget === null ? null : (this.yawTarget / RAD),
         yawBestGainPct: this.yawGain,
       },
-      actuatorW: p.actuator.powerW * PETAL_IDS.filter((id) => Math.abs(this.targets[id] - this.tilts[id]) > 0.05).length, demandDegS: this.demand,
+      collisionLimited: this.collisionLimited,
+      actuatorW: this.collisionLimited ? 0 : actuatorDemandW(d, this.tilts, this.targets, p.actuator.rateDegS, p.actuator.powerW), demandDegS: this.demand,
     };
   }
 }

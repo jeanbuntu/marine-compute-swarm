@@ -1,3 +1,4 @@
+import { hullSection } from '../hardware';
 import { G, RHO_SEA } from '../constants';
 import { evaluate, MAX_HEEL_DEG } from '../hydrostatics';
 import type { NodeDesign } from '../parts';
@@ -20,7 +21,7 @@ export const MAX_TILT_RAD = (MAX_HEEL_DEG * Math.PI) / 180 * 4;
 export function hullProps(d: NodeDesign): HullProps {
   const h = evaluate(d, 'deployed');
   const side = d.hullSideM, keelW = side * 0.6;
-  const waterplane = h.draftM < d.keelDepthM ? keelW * keelW : side * side;
+  const waterplane = hullSection(h.draftM < d.keelDepthM ? keelW : side).area;
   const height = d.keelDepthM + d.hullDepthM;
   const inertia = (h.massKg * (side * side + height * height)) / 12 * (1 + ADDED_INERTIA);
   const gm = Math.max(0.05, h.gmM);

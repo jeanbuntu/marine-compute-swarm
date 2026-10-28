@@ -1,3 +1,4 @@
+import { hullSection, petalGeometry, PANEL_STACK_PITCH_M } from './hardware';
 import { NOMINAL_DECK_Y } from './nodeDesign';
 import { G, RHO_AIR, RHO_SEA } from './constants';
 import type { NodeDesign, Part } from './parts';
@@ -35,12 +36,12 @@ export function partPosition(d: NodeDesign, p: Part, state: PetalState): [number
   if (!isPetal(p)) return p.pos;
   if (state === 'stowed') {
     const layer = d.parts.filter(isPetal).findIndex(part => part.id === p.id);
-    return [p.pos[0], p.pos[1] + d.keelDepthM + d.hullDepthM - NOMINAL_DECK_Y + layer * 0.055, p.pos[2]];
+    return [p.pos[0], p.pos[1] + d.keelDepthM + d.hullDepthM - NOMINAL_DECK_Y + layer * PANEL_STACK_PITCH_M, p.pos[2]];
   }
   const [x, y, z] = p.pos;
   const r = Math.hypot(x, z) || 1;
-  const reach = d.hullSideM / 2 + (d.petalLengthM / 2) * Math.cos(PETAL_TILT_RAD);
-  return [(x / r) * reach, d.keelDepthM + d.hullDepthM + y - NOMINAL_DECK_Y + (d.petalLengthM / 2) * Math.sin(PETAL_TILT_RAD), (z / r) * reach];
+  const reach = d.hullSideM / 2 + petalGeometry(d).centroid * Math.cos(PETAL_TILT_RAD);
+  return [(x / r) * reach, d.keelDepthM + d.hullDepthM + y - NOMINAL_DECK_Y + petalGeometry(d).centroid * Math.sin(PETAL_TILT_RAD), (z / r) * reach];
 }
 
 function failed(d: NodeDesign): HydroResult {
@@ -55,29 +56,30 @@ export function evaluate(d: NodeDesign, petals: PetalState, windMs?: number): Hy
 
   const side = d.hullSideM;
   const kw = side * KEEL_WIDTH_RATIO;
-  const keelV = kw * kw * d.keelDepthM;
+  const ks = hullSection(kw), hs = hullSection(side);
+  const keelV = ks.area * d.keelDepthM;
   const height = d.keelDepthM + d.hullDepthM;
   const volume = m / RHO_SEA;
 
   // Draft from displaced volume: keel pod first, then the full hull box.
   let draft: number;
-  if (volume <= keelV) draft = volume / (kw * kw);
-  else draft = d.keelDepthM + (volume - keelV) / (side * side);
+  if (volume <= keelV) draft = volume / ks.area;
+  else draft = d.keelDepthM + (volume - keelV) / hs.area;
 
   // Submerged volume centroid (KB) and waterplane inertia.
   const keelSubD = Math.min(draft, d.keelDepthM);
-  const keelSubV = kw * kw * keelSubD;
+  const keelSubV = ks.area * keelSubD;
   const hullSubD = Math.max(0, draft - d.keelDepthM);
-  const hullSubV = side * side * hullSubD;
+  const hullSubV = hs.area * hullSubD;
   const kb = (keelSubV * (keelSubD / 2) + hullSubV * (d.keelDepthM + hullSubD / 2)) / (keelSubV + hullSubV);
-  const wp = draft > d.keelDepthM ? side : kw;
-  const bm = wp ** 4 / 12 / volume;
+  const wp = draft > d.keelDepthM ? hs : ks;
+  const bm = wp.inertia / volume;
 
   // Center of gravity for the chosen petal state.
   const kg = d.parts.reduce((s, p) => s + p.massKg * partPosition(d, p, petals)[1], 0) / m;
   const gm = kb + bm - kg;
 
-  const watertightV = keelV + side * side * d.hullDepthM;
+  const watertightV = keelV + hs.area * d.hullDepthM;
   const reserve = (RHO_SEA * watertightV - m) / m;
   const freeboard = height - draft;
 
@@ -86,7 +88,7 @@ export function evaluate(d: NodeDesign, petals: PetalState, windMs?: number): Hy
   const mastArea = d.parts
     .filter((p) => !isPetal(p) && p.pos[1] > height)
     .reduce((s, p) => s + p.size[0] * Math.max(0, p.size[1]), 0);
-  const petalArea = petals === 'deployed' ? d.petalCount * d.petalLengthM * side * Math.sin(PETAL_TILT_RAD) : 0;
+  const petalArea = petals === 'deployed' ? d.petalCount * petalGeometry(d).area * Math.sin(PETAL_TILT_RAD) : 0;
   const area = Math.max(0, freeboard) * side + mastArea + petalArea;
   const force = 0.5 * RHO_AIR * CD_WIND * area * v * v;
   const arm = Math.max(0, freeboard) / 2 + draft / 2;

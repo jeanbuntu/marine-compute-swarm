@@ -13,7 +13,7 @@ test('describes a hovered petal', () => {
   useStore.getState().hover('n2/petal-E');
   render(<HoverCard />);
   expect(screen.getByText('Petal E')).toBeInTheDocument();
-  expect(screen.getByText(/Hinged PV petal/)).toBeInTheDocument();
+  expect(screen.getByText(/Tapered PV facet/)).toBeInTheDocument();
 });
 
 test('describes a hovered node and invites a click', () => {

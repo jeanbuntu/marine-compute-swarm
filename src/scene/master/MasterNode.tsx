@@ -1,7 +1,11 @@
+import { explodeOffsets, EXPLODE_FACTOR } from '../explode';
+import { DimensionGuide } from '../DimensionGuide';
+import { petalGeometry, PETAL_PAIRS } from '../../model/hardware';
+import { useStore } from '../../state/store';
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Group, Mesh, Quaternion, Vector3, Line as ThreeLine, BufferGeometry, LineBasicMaterial } from 'three';
-import { NodeModel, Block, SolarPanel } from '../NodeModel';
+import { NodeModel, Block, FacetPanel } from '../NodeModel';
 import { msim, useMaster } from '../../state/master';
 import { PETAL_DIRS, PETAL_IDS, petalNormalBody, type PetalId } from '../../model/master/solar';
 import { thrustersFromDesign } from '../../model/master/thrust';
@@ -22,7 +26,10 @@ export function skyCameraLocal(): [number, number, number] {
  */
 export function MasterNode() {
   const outer = useRef<Group>(null);
-  const design = msim.design;
+  const exploded = useMaster(s => s.exploded), dimensions = useMaster(s => s.dimensions), selected = useMaster(s => s.selectedPart);
+  const role = useMaster(s => s.role);
+  const design = useStore(s => s.designs[role]);
+  const offsets = useMemo(() => exploded ? explodeOffsets(design.parts, EXPLODE_FACTOR) : {}, [design, exploded]);
   const draft = useMemo(() => evaluate(design, 'deployed').draftM, [design]);
 
   useFrame(() => {
@@ -35,9 +42,10 @@ export function MasterNode() {
 
   return (
     <group ref={outer}>
-      <group position={[0, -draft, 0]}>
-        <NodeModel design={design} petals="deployed" hidePetals />
-        {PETAL_IDS.map((id) => <LivePetal key={id} id={id} />)}
+      <group position={[0, exploded ? 1.8 : -draft, 0]}>
+        <NodeModel design={design} petals="deployed" hidePetals={!exploded} offsets={offsets} ghostShell={exploded} highlightId={dimensions ? selected : null} onPartClick={id => useMaster.getState().set({ selectedPart: id, dimensions: true })} />
+        {!exploded && PETAL_IDS.map((id) => <LivePetal key={id} id={id} />)}
+        {dimensions && <DimensionGuide design={design} partId={selected} offsets={offsets} live={!exploded} unit />}
         <ThrusterGlyphs />
       </group>
       <SunRay />
@@ -50,13 +58,15 @@ function LivePetal({ id }: { id: PetalId }) {
   const dir = PETAL_DIRS[id], dx = dir[0], dz = dir[2];
   const hinge = useRef<Group>(null), rod = useRef<Mesh>(null);
   const line = useMemo(() => new ThreeLine(new BufferGeometry().setFromPoints([new Vector3(), new Vector3(0, 0.7, 0)]), new LineBasicMaterial({ color: '#ffd24a' })), []);
-  const width = dx ? L : side, depth = dz ? L : side;
+  const pg = petalGeometry(d);
+  const driven = PETAL_PAIRS.some(pair => pair[0] === id);
 
   useFrame(() => {
     const g = hinge.current;
     if (!g) return;
     const t = msim.tilts[id] * RAD, c = Math.cos(t), s = Math.sin(t);
-    g.rotation.set(dz ? -dz * t : 0, 0, dx ? dx * t : 0);
+    g.rotation.set(0, -Math.atan2(dz, dx), 0);
+    g.children[0].rotation.z = t;
     // actuator rod: from a fixed anchor in the hull to the underside of the petal, so its length follows the tilt
     const reach = side / 2 + 0.62 * L * c + 0.045 * s;
     _a.set(dx * (side / 2 - 0.28), deck - 0.1, dz * (side / 2 - 0.28));
@@ -76,13 +86,11 @@ function LivePetal({ id }: { id: PetalId }) {
 
   return (
     <>
-      <group ref={hinge} position={[dx * side / 2, deck, dz * side / 2]}>
-        <group position={[dx * L / 2, 0, dz * L / 2]}>
-          <SolarPanel width={width} depth={depth} thickness={0.05} hot={false} />
-        </group>
-        <Block at={[0, -0.01, 0]} size={[dz ? side : 0.07, 0.07, dx ? side : 0.07]} color="#344b52" />
+      <group ref={hinge} position={[dx * side / 2, deck, dz * side / 2]} onClick={e => { e.stopPropagation(); useMaster.getState().set({ selectedPart: `petal-${id}`, dimensions: true }); }}>
+        <group><FacetPanel design={d} center={L / 2} hot={useMaster(s => s.dimensions && s.selectedPart === `petal-${id}`)} /></group>
+        <Block at={[0, -0.01, 0]} size={[0.05, 0.05, pg.innerWidth]} color="#344b52" />
       </group>
-      <mesh ref={rod}><cylinderGeometry args={[1, 1, 1, 8]} /><meshStandardMaterial color="#8e9b9d" metalness={0.4} roughness={0.5} /></mesh>
+      {driven && <mesh ref={rod}><cylinderGeometry args={[1, 1, 1, 12]} /><meshStandardMaterial color="#8e9b9d" metalness={0.65} roughness={0.32} /></mesh>}
       <primitive object={line} />
     </>
   );

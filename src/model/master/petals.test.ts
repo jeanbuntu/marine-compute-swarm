@@ -13,11 +13,11 @@ describe('static heel', () => {
     expect(Math.abs(s.roll) + Math.abs(s.pitch)).toBeLessThan(1e-9);
   });
   it('heels toward the flat side: a raised petal pulls its mass inward, so the west side sinks', () => {
-    const s = staticHeel(d, { E: 60, S: 20, W: 0, N: 20 }, h.gmM);
+    const s = staticHeel(d, { ...uniformTilts(20), E: 60, W: 0 }, h.gmM);
     expect(s.roll).toBeGreaterThan(0); // positive roll raises east, so west is down
   });
   it('limits asymmetric tilts so heel stays inside the stability limit', () => {
-    const t = limitHeel(d, { E: 75, S: 0, W: -30, N: 0 }, h.gmM);
+    const t = limitHeel(d, { ...uniformTilts(0), E: 75, W: -30 }, h.gmM);
     const s = staticHeel(d, t, h.gmM);
     expect(Math.hypot(s.roll, s.pitch) * 180 / Math.PI).toBeLessThanOrEqual(8.01);
   });

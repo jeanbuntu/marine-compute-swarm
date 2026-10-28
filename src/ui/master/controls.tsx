@@ -78,6 +78,6 @@ export function LineChart({ series, height = 84, unit = '', min, max }: { series
   );
 }
 
-export const PETAL_COLORS: Record<string, string> = { E: '#ffc247', S: '#4fd1c5', W: '#ff7a90', N: '#9db4ff' };
+export const PETAL_COLORS: Record<string, string> = { E: '#ffc247', S: '#4fd1c5', W: '#ff7a90', N: '#9db4ff', SE: '#e9a16b', SW: '#61b7a8', NW: '#d08cc7', NE: '#a0c7e8' };
 export const fmtW = (w: number) => (Math.abs(w) >= 1000 ? `${(w / 1000).toFixed(2)} kW` : `${w.toFixed(0)} W`);
 export const deg = (r: number) => (r * 180) / Math.PI;

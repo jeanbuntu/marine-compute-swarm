@@ -15,7 +15,7 @@ export function HoverCard() {
       {part ? (
         <>
           <b>{part.name}</b>
-          <div className="dim">{part.subsystem} · {part.massKg} kg · {part.powerW} W</div>
+          <div className="dim">{part.subsystem} · {Number(part.massKg.toFixed(2))} kg · {part.powerW} W</div>
           <div className="dim small">{partEnvelope(designs[role], part).map(v => `${Math.round(v * 1000)} mm`).join(" × ")} · EST</div>
           <div>{part.rationale}</div>
         </>

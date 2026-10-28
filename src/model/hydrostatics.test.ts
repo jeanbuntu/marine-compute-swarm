@@ -1,5 +1,6 @@
 import { evaluate, evaluateWorst, partPosition, PETAL_TILT_DEG } from './hydrostatics';
 import { workerDesign, masterDesign } from './nodeDesign';
+import { petalGeometry } from './hardware';
 import type { NodeDesign, Part } from './parts';
 
 const withPart = (d: NodeDesign, p: Partial<Part> & { id: string }): NodeDesign => ({
@@ -62,9 +63,9 @@ test('deployed panel inner edges meet their hinges at every panel length', () =>
     const angle = PETAL_TILT_DEG * Math.PI / 180;
     for (const p of d.parts.filter(p => p.id.startsWith('petal-'))) {
       const pos = partPosition(d, p, 'deployed');
-      const axis = p.pos[0] ? 0 : 2;
-      expect(Math.abs(pos[axis]) - Math.cos(angle) * length / 2).toBeCloseTo(d.hullSideM / 2);
-      expect(pos[1] - Math.sin(angle) * length / 2).toBeCloseTo(d.keelDepthM + d.hullDepthM + 0.08);
+      const centroid = petalGeometry(d).centroid;
+      expect(Math.hypot(pos[0], pos[2]) - Math.cos(angle) * centroid).toBeCloseTo(d.hullSideM / 2);
+      expect(pos[1] - Math.sin(angle) * centroid).toBeCloseTo(d.keelDepthM + d.hullDepthM + 0.08);
     }
   }
 });

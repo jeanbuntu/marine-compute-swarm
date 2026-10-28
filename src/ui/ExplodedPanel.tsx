@@ -1,3 +1,4 @@
+import { Dimensions } from './Dimensions';
 import { partEnvelope } from '../model/nodeDesign';
 import { useMemo } from 'react';
 import { useStore } from '../state/store';
@@ -11,6 +12,7 @@ const ORDER: Subsystem[] = ['hull', 'power', 'compute', 'cooling', 'propulsion',
 const f = (n: number, d = 2) => Number(n.toFixed(d)).toString();
 
 export function ExplodedPanel() {
+  const dimensions = useStore(s => s.inspectionDimensions), setDimensions = useStore.getState().setInspectionDimensions;
   const nodeId = useStore((s) => s.explodedNodeId);
   const inspectionExploded = useStore((s) => s.inspectionExploded);
   const designs = useStore((s) => s.designs);
@@ -35,11 +37,13 @@ export function ExplodedPanel() {
         {role === 'master' ? 'Carries the swarm’s only Starlink terminal and the coordinator.' : 'Compute worker; links to the master over the mesh radio.'}
       </p>
 
+      <p className="small"><a style={{ color: 'var(--accent)' }} href={`?view=unit&role=${role}`}>Open unit bench →</a></p>
       <div className="row" style={{ marginBottom: 8 }}>
+        <button aria-pressed={dimensions} onClick={() => setDimensions(!dimensions)}>Dimensions</button>
         <button aria-pressed={!inspectionExploded} className={!inspectionExploded ? 'primary' : ''} onClick={() => useStore.getState().setInspectionExploded(false)}>Assembled</button>
         <button aria-pressed={inspectionExploded} className={inspectionExploded ? 'primary' : ''} onClick={() => useStore.getState().setInspectionExploded(true)}>Exploded</button>
       </div>
-      <p className="dim small">1 scene unit = 1 m · white scale bar = 1 m<br />Hull {f(design.hullSideM)} × {f(design.hullSideM)} × {f(design.hullDepthM)} m · keel {f(design.keelDepthM)} m deep<br />Deployed span {f(design.hullSideM + 2 * design.petalLengthM * Math.cos(20 * Math.PI / 180))} m · hardware dimensions EST</p>
+      <p className="dim small">1 scene unit = 1 m · white scale bar = 1 m<br />Hull {f(design.hullSideM)} × {f(design.hullSideM)} × {f(design.hullDepthM)} m · keel {f(design.keelDepthM)} m deep<br />Deployed span {f((design.hullSideM + 2 * design.petalLengthM * Math.cos(20 * Math.PI / 180)) / Math.cos(Math.PI / 8))} m · hardware dimensions EST</p>
       <span className={`pill ${worst.ok ? 'ok' : 'bad'}`}>{worst.ok ? 'Floats and stays upright' : `Unstable: ${worst.violations.join(', ')}`}</span>
       <div className="grid2" style={{ marginTop: 8 }}>
         <span>Mass <b>{f(worst.massKg, 0)} kg</b></span>
@@ -50,6 +54,7 @@ export function ExplodedPanel() {
         <span>Heel <b>{f(worst.heelDeg, 1)}°</b></span>
       </div>
 
+      {dimensions && <Dimensions design={design} selected={selectedPartId ?? 'hull-shell'} onSelect={selectPart} />}
       <OutcomeBanner />
 
       {part && (

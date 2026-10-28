@@ -1,6 +1,8 @@
 import type { NodeDesign, Part, Subsystem } from './parts';
+import { GPU, COMPUTE_SIZE, PETAL_IDS, PETAL_DIRS, petalGeometry, deckAreaM2 } from './hardware';
 
-const HULL_SIDE = 1.52;
+// Battery bays set packaging width; 1.60 m also clears the 25 m/s stowed-wind check.
+const HULL_SIDE = 1.60;
 const HULL_DEPTH = 0.9;
 const KEEL_DEPTH = 0.35;
 const PETAL_LEN = 1.1;
@@ -18,9 +20,9 @@ function part(
 function commonParts(): Part[] {
   const h = HULL_SIDE / 2;
   const parts: Part[] = [
-    part('hull-shell', 'Hull shell', 'hull', 110, [0, KEEL_DEPTH + HULL_DEPTH * 0.55, 0], [HULL_SIDE, HULL_DEPTH, HULL_SIDE], 0, 3500,
-      'Sealed foam-cored composite box; square so nodes tile and petals hinge off straight edges.'),
-    part('keel-pod', 'Keel pod shell', 'hull', 40, [0, KEEL_DEPTH / 2, 0], [HULL_SIDE * 0.6, KEEL_DEPTH, HULL_SIDE * 0.6], 0, 1500,
+    part('hull-shell', 'Hull shell', 'hull', 122, [0, KEEL_DEPTH + HULL_DEPTH * 0.55, 0], [HULL_SIDE, HULL_DEPTH, HULL_SIDE], 0, 3500,
+      'Sealed foam-cored hull with 80 mm radiused corners; equipment bays and battery reserve govern its footprint beneath the octagonal PV deck.'),
+    part('keel-pod', 'Keel pod shell', 'hull', 44, [0, KEEL_DEPTH / 2, 0], [HULL_SIDE * 0.6, KEEL_DEPTH, HULL_SIDE * 0.6], 0, 1500,
       'Narrow keel below the hull keeps heavy items low and puts cooling and thrusters in the water.'),
     part('ballast', 'Ballast', 'hull', 80, [0, 0.08, 0], [0.8, 0.08, 0.8], 0, 200,
       'Fixed ballast plate at the keel bottom lowers the center of gravity; the main tuning knob for stability.'),
@@ -32,8 +34,10 @@ function commonParts(): Part[] {
       'Near hull center so petal and deck PV cables stay short.'),
     part('deck-pv', 'Deck PV', 'power', 18, [0, DECK_Y, 0], [HULL_SIDE * 0.9, 0.04, HULL_SIDE * 0.9], 0, 900,
       'Fixed PV across the deck gives baseline power even with petals stowed.'),
-    part('compute-pod', 'Compute pod (2x data-center GPU, host)', 'compute', 35, [0, 0.55, 0.3], [0.5, 0.3, 0.4], 280, 9000,
-      'Estimated 500 × 300 × 400 mm sealed dual-GPU enclosure on the lower hull tray, above the battery; cold plates connect to the seawater exchanger.'),
+    part('compute-pod', 'Dual L4 host and sealed enclosure', 'compute', 24, [0, 0.55, 0.3], COMPUTE_SIZE, 136, 9000,
+      'EST enclosure derived from two full-size L4 cards plus host, cold plate, connectors and service clearance. 136 W host/cooling allowance; cards add 144 W. Closed-loop liquid cooling is a concept requiring thermal validation.'),
+    ...[-1, 1].map((s, i) => part(`gpu-${i + 1}`, `NVIDIA L4 GPU ${i + 1}`, 'compute', GPU.massKg, [s * 0.055, 0.60, 0.3], [GPU.slotM, GPU.heightM, GPU.lengthM], GPU.powerW, 0,
+      'NVIDIA PB-11316-001 v01 Fig. 4: 168.54 mm length × 68.90 mm board height at 1:1 scene scale; 20.32 mm single-slot allowance (EST thickness). 24 GB, 72 W per card. Card cost included in compute assembly.')),
     part('heat-exchanger', 'Seawater heat exchanger', 'cooling', 12, [0, 0.23, -0.475], [0.5, 0.18, 0.04], 20, 600,
       'Hull-wall plate exchanger; ocean water is the heat sink, so no fans or evaporative loss.'),
     part('gnss', 'GNSS receiver', 'navigation', 0.5, [h * 0.6, DECK_Y + 0.08, h * 0.6], [0.1, 0.05, 0.1], 2, 300,
@@ -51,11 +55,12 @@ function commonParts(): Part[] {
       [sx * (h * 0.6 + 0.12), 0.23, sz * (h * 0.6 + 0.12)], [0.16, 0.16, 0.3], 300, 1200,
       'Fixed 45 degree corner thruster below the waterline; the four together push in any direction with no steering parts.'));
   });
-  const dirs: [number, number, string][] = [[1, 0, 'E'], [0, 1, 'S'], [-1, 0, 'W'], [0, -1, 'N']];
-  for (const [dx, dz, tag] of dirs) {
-    parts.push(part(`petal-${tag}`, `Petal ${tag}`, 'petals', 28, [dx * HULL_SIDE * 0.25, DECK_Y + 0.08, dz * HULL_SIDE * 0.25],
-      [dx === 0 ? HULL_SIDE : PETAL_LEN, 0.05, dz === 0 ? HULL_SIDE : PETAL_LEN], 6, 1400,
-      'Hinged PV petal with a single actuator; folds over the deck to stow in wind and unfolds to tilt toward the sun.'));
+  const pg = petalGeometry({ hullSideM: HULL_SIDE, petalLengthM: PETAL_LEN });
+  for (const [i, tag] of PETAL_IDS.entries()) {
+    const [dx, , dz] = PETAL_DIRS[tag];
+    parts.push(part(`petal-${tag}`, `Petal ${tag}`, 'petals', pg.area * 16.75, [dx * HULL_SIDE * 0.25, DECK_Y + 0.08, dz * HULL_SIDE * 0.25],
+      [pg.outerWidth, 0.05, PETAL_LEN], i % 2 === 0 ? 6 : 0, pg.area * 835,
+      'Tapered PV facet with clearance-cut edges and rounded tips in an eight-petal ring. Adjacent pairs share one geared drive; four drives total. Swarm load assumes 6 W average per drive at roughly 10% duty. Instantaneous load is higher and estimated in the unit bench. Folding and collision clearance require mechanical validation.'));
   }
   return parts;
 }
@@ -63,7 +68,7 @@ function commonParts(): Part[] {
 function base(role: 'worker' | 'master', extra: Part[]): NodeDesign {
   return {
     role, hullSideM: HULL_SIDE, hullDepthM: HULL_DEPTH, keelDepthM: KEEL_DEPTH,
-    petalLengthM: PETAL_LEN, petalCount: 4, parts: [...commonParts(), ...extra],
+    petalLengthM: PETAL_LEN, petalCount: 8, parts: [...commonParts(), ...extra],
   };
 }
 
@@ -93,7 +98,7 @@ export function partMassKg(d: NodeDesign): number {
 
 /** Deployed PV area: petals plus 80% of the deck. */
 export function pvAreaM2(d: NodeDesign): number {
-  return d.petalCount * d.petalLengthM * d.hullSideM + 0.8 * d.hullSideM * d.hullSideM;
+  return d.petalCount * petalGeometry(d).activeArea + 0.8 * deckAreaM2(d);
 }
 
 
@@ -101,7 +106,7 @@ export function pvAreaM2(d: NodeDesign): number {
 export function partEnvelope(d: NodeDesign, p: Part): [number, number, number] {
   if (p.id === 'hull-shell') return [d.hullSideM, d.hullDepthM, d.hullSideM];
   if (p.id === 'keel-pod') return [d.hullSideM * 0.6, d.keelDepthM, d.hullSideM * 0.6];
-  if (p.id === 'deck-pv') return [d.hullSideM * 0.9, p.size[1], d.hullSideM * 0.9];
-  if (p.id.startsWith('petal-')) return [p.pos[0] ? d.petalLengthM : d.hullSideM, p.size[1], p.pos[2] ? d.petalLengthM : d.hullSideM];
+  if (p.id === 'deck-pv') return [d.hullSideM, p.size[1], d.hullSideM];
+  if (p.id.startsWith('petal-')) return [petalGeometry(d).outerWidth, p.size[1], d.petalLengthM];
   return p.size;
 }

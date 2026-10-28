@@ -16,6 +16,8 @@ interface State {
   selectedPartId: string | null;
   drawerOpen: boolean;
   inspectionExploded: boolean;
+  inspectionDimensions: boolean;
+  setInspectionDimensions(show: boolean): void;
   playing: boolean;
   speed: number; // simulated seconds per real second
   timeS: number;
@@ -40,7 +42,7 @@ const initial = () => ({
   config: defaultConfig(),
   designs: { worker: workerDesign(), master: masterDesign() },
   selectedNodeId: null, hoveredId: null, explodedNodeId: null, selectedPartId: null,
-  inspectionExploded: true, drawerOpen: false, playing: true, speed: 120, timeS: 9 * 3600, lastOutcome: null,
+  inspectionDimensions: false, inspectionExploded: true, drawerOpen: false, playing: true, speed: 120, timeS: 9 * 3600, lastOutcome: null,
 });
 
 export const useStore = create<State>((set, get) => ({
@@ -67,6 +69,7 @@ export const useStore = create<State>((set, get) => ({
   hover: (id) => set({ hoveredId: id }),
   explode: (id) => set({ explodedNodeId: id, selectedPartId: null, selectedNodeId: id ?? get().selectedNodeId, lastOutcome: null }),
   selectPart: (id) => set({ selectedPartId: id }),
+  setInspectionDimensions: (inspectionDimensions) => set({ inspectionDimensions }),
   setInspectionExploded: (inspectionExploded) => set({ inspectionExploded }),
   setDrawer: (open) => set({ drawerOpen: open }),
   setPlaying: (playing) => set({ playing }),

@@ -28,7 +28,7 @@ export function PetalsTab() {
         <Stat label="Petal rate needed" value={`${t.demandDegS.toFixed(1)}°/s`} tone={behind ? 'bad' : 'ok'} sub={`actuator limit ${rate}°/s${behind ? ' — falling behind' : ''}`} />
       </div>
 
-      <h3>Petals</h3>
+      <h3>Eight petals · four paired drives</h3><p className="dim small">E/SE · S/SW · W/NW · N/NE share their tilt. Geared linkage concept; four loaded drives, with no counterbalance credit.</p>
       <table className="mtable">
         <thead><tr><th></th><th>Tilt</th><th>Wanted</th><th>Ideal</th><th>cos θ</th><th>W/m²</th></tr></thead>
         <tbody>
@@ -43,9 +43,11 @@ export function PetalsTab() {
       </table>
       <div className="dim small" style={{ marginTop: 4 }}>
         Allowed tilt {t.limits.minDeg.toFixed(0)}° to {t.limits.maxDeg.toFixed(0)}° (tip clearance in this sea, actuator stops)
+        {t.collisionLimited && <p role="status" style={{ color: 'var(--accent)' }}>Panel clearance interlock: linked drives stopped before contact. Tracking output uses the actual angles.</p>}
         {t.stowed && <b style={{ color: 'var(--bad)' }}> · STOWED: wind above 12 m/s</b>}
       </div>
 
+      <div className="mcards"><Stat label="Actuator demand (EST)" value={fmtW(t.actuatorW)} sub="Gravity load at commanded speed, 55% drive efficiency plus controller overhead. Wave/wind torque not included." /></div>
       <h3>Power from the same sun</h3>
       {bars.map((b) => (
         <div key={b.label} className="mbar2" title={b.note}>
@@ -65,7 +67,7 @@ export function PetalsTab() {
       <h3>Petal tilt · last 30 s</h3>
       <LineChart unit="°" series={[
         ...PETAL_IDS.map((id, i) => ({ label: `${id} actual`, color: PETAL_COLORS[id], data: h.map((s) => s.tilt[i]) })),
-        { label: 'W ideal', color: PETAL_COLORS.W, dash: true, data: h.map((s) => s.ideal[2]) },
+        { label: 'W ideal', color: PETAL_COLORS.W, dash: true, data: h.map((s) => s.ideal[PETAL_IDS.indexOf('W')]) },
       ]} />
       <h3>Hull motion · last 30 s</h3>
       <LineChart unit="°" series={[

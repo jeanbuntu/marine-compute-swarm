@@ -1,3 +1,4 @@
+import { GPU } from './hardware';
 import { makeSky } from './sky';
 import { makeSwarm, stepSwarm, type Designs, type Swarm, type Vec2 } from './swarm';
 import { masterDesign, workerDesign } from './nodeDesign';
@@ -9,11 +10,13 @@ import type { ScenarioConfig } from './config';
 export interface Impact { energyKwh: number; computeTflopH: number; revenueUsd: number; co2AvoidedKg: number }
 export interface Comparison { swarm: Impact; stayPut: Impact; gainPct: number }
 
-const TFLOPS_PER_W = 1.68; // EST: data-center inference GPU, dense FP16, per electrical watt
-/** Compute pod power budget: the sum of compute parts in the design. */
-const computeCapW = (d: NodeDesign) => d.parts.filter((p) => p.subsystem === 'compute').reduce((s, p) => s + p.powerW, 0);
-/** Fixed loads that are neither compute nor propulsion. */
-const baseLoadW = (d: NodeDesign) => d.parts.filter((p) => p.subsystem !== 'compute' && p.subsystem !== 'propulsion').reduce((s, p) => s + p.powerW, 0);
+// NVIDIA Ada whitepaper Appendix D: 121 dense FP16 Tensor TFLOPS per 72 W L4.
+// Linear scaling with electrical budget and usableComputeShare remains an estimate.
+const TFLOPS_PER_W = GPU.denseFp16Tflops / GPU.powerW;
+/** Only GPU electrical power earns GPU throughput; host and coordinator are overhead. */
+const computeCapW = (d: NodeDesign) => d.parts.filter((p) => p.id.startsWith('gpu-')).reduce((s, p) => s + p.powerW, 0);
+/** Fixed host, coordinator and auxiliary loads. */
+const baseLoadW = (d: NodeDesign) => d.parts.filter((p) => !p.id.startsWith('gpu-') && p.subsystem !== 'propulsion').reduce((s, p) => s + p.powerW, 0);
 const DT_S = 30;
 
 function simulate(c: ScenarioConfig, hours: number, startHour: number, nav: Navigator, designs: Designs): Impact {

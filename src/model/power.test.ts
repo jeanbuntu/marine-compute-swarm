@@ -7,9 +7,9 @@ describe('power', () => {
     const d = workerDesign();
     expect(pvPowerW(d, 1000, 0.2)).toBeCloseTo(pvPowerW(d, 1000, 1) * 0.2, 6);
   });
-  test('clear noon worker PV is between 1.2 and 2.2 kW', () => {
+  test('clear noon worker PV is between 1.8 and 2.2 kW', () => {
     const p = pvPowerW(workerDesign(), 1000, 1);
-    expect(p).toBeGreaterThan(1200);
+    expect(p).toBeGreaterThan(1800);
     expect(p).toBeLessThan(2200);
   });
   test('battery stays within bounds', () => {
