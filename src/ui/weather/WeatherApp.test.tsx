@@ -2,12 +2,12 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { WeatherApp } from './WeatherApp';
 import { readView } from '../../scene/urlState';
 
-test('weather has a separate route and seven scenario tabs', () => {
+test('weather has a separate route and a compact seven-scenario selector', () => {
   expect(readView('?view=weather')).toBe('weather');
   render(<WeatherApp />);
-  expect(screen.getAllByRole('tab')).toHaveLength(7);
-  fireEvent.click(screen.getByRole('tab', { name: /Night/ }));
-  expect(screen.getByRole('tab', { name: /Night/ })).toHaveAttribute('aria-selected', 'true');
+  expect(within(screen.getByLabelText('Conditions')).getAllByRole('option')).toHaveLength(7);
+  fireEvent.change(screen.getByLabelText('Conditions'), {target:{value:'night'}});
+  expect(screen.getByLabelText('Conditions')).toHaveValue('night');
   expect(screen.getByRole('heading', { name: 'What stays powered when the sun disappears?' })).toBeInTheDocument();
 });
 test('failure injection, fleet reset, and design rationale are accessible', () => {

@@ -1,3 +1,4 @@
+import { SimulationToolbar } from '../SimulationToolbar';
 import { ReasoningPanel } from '../reasoning/ReasoningPanel';
 import { observe, signature, validateDecision, type Decision, type Observation } from '../../model/reasoning/harness';
 import { fitFleet, mapPoint, worldPoint, type MapCamera } from '../../model/fleetMap';
@@ -58,11 +59,13 @@ export function WeatherApp({ reasoning = false }: { reasoning?: boolean }) {
   const master = state.nodes[0];
   const soc = node.wh / batteryCapacityWh(designs[node.role]);
   const hydro = evaluate(designs[node.role], env.stowed ? 'stowed' : 'deployed', conditions.wind);
-  const camera=fitFleet(state.nodes,mapSize.width,mapSize.height),sun=weatherSun(state.t,scenario);
+  const displayNodes=state.nodes.map(n=>({...n,...(n.displayAnchor??{})}));
+  const camera=fitFleet(displayNodes,mapSize.width,mapSize.height),sun=weatherSun(state.t,scenario);
   const pos = (x:number,y:number)=>mapPoint(camera,x,y);
   const gridSize=camera.gridM/camera.metersPerUnit;
   const [gridX,gridY]=pos(0,0);
-  const [mx, my] = pos(master.x, master.y);
+  const displayMaster=displayNodes[0];
+  const [mx, my] = pos(displayMaster.x, displayMaster.y);
   const mutate = (message: string, fn: (s: WeatherState) => WeatherState) => setState(s => logEvent(stepWeather(fn(s), conditions, scenario, 0, designs), message));
   const inject = (type: 'range' | 'flip' | 'strike' | 'ingress' | 'battery') => {
     const labels = { range: 'Displaced beyond every relay', flip: 'Full capsize injected', strike: 'Wildlife impact: displacement + inversion injected (severity assumed)', ingress: 'Water ingress injected: electrical isolation', battery: 'Battery reduced to 8%' };
@@ -92,7 +95,13 @@ export function WeatherApp({ reasoning = false }: { reasoning?: boolean }) {
   };
   const netPower = node.pvW - node.loadW;
   return <div className={`weather-app weather-${scenario}`}>
-    <SiteHeader page={reasoning ? 'reasoning' : detailOpen ? node.role === 'master' ? 'master-recovery' : 'worker-recovery' : 'weather'} />
+    <SiteHeader page={reasoning ? 'reasoning' : 'weather'} />
+    <SimulationToolbar playing={playing} speed={speed} time={`Day ${sun.day} · ${time(sun.hour*3600)}`} onPlaying={play} onSpeed={setSpeed}>
+      <label className="toolbar-field">Conditions<select aria-label="Conditions" value={scenario} onChange={e=>changeScenario(e.target.value as ScenarioId)}>{SCENARIOS.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+      <label className="toolbar-field">Selection<select aria-label="Selected node" value={selected} onChange={e=>select(e.target.value)}>{state.nodes.map(n=><option key={n.id}>{n.id}</option>)}</select></label>
+      <button aria-expanded={showControls} onClick={()=>setShowControls(!showControls)}>Adjust conditions</button>
+      <button onClick={()=>{setReasoningEpoch(v=>v+1);setState(createWeather(designs));select('W01');}}>Reset fleet</button>
+    </SimulationToolbar>
     <main>
       <div className="w-heading"><div><div className="w-eyebrow">OCEAN RESILIENCE / FAILURE REHEARSAL</div><h1>{reasoning ? 'Muse Reasoning' : 'Weather Simulator'}<span>.</span></h1><p>{reasoning ? 'An expert coordinator on each master. Observe, reason, validate, act.' : 'Push the conditions. Break the formation. Work out what comes next.'}</p></div><button onClick={() => setShowPlan(!showPlan)} aria-expanded={showPlan}>Recovery & design rationale ↗</button></div>
       {reasoning && <ReasoningPanel selectedNode={selected} onInject={inject} epoch={reasoningEpoch} state={state} conditions={conditions} scenario={scenario} designs={designs} onClear={()=>setState(s=>({...s,reasoningPolicy:undefined}))} onApply={(decision:Decision,input:Observation)=>{
@@ -103,17 +112,13 @@ export function WeatherApp({ reasoning = false }: { reasoning?: boolean }) {
         setState(s=>logEvent({...s,reasoningPolicy:{strategy:decision.strategy,searchRadiusM:decision.searchRadiusM,expiresAt:s.t+Math.min(120,decision.nextCheckS)}},`Muse strategy: ${decision.strategy} — ${decision.summary}`));
         return `Executed ${decision.strategy}: bounded strategy sent to local controller. Dispatch remains subject to live feasibility checks.`;
       }} />}
-      <div className="w-tabs" role="tablist" aria-label="Weather scenarios" onKeyDown={e => {
-        const index = SCENARIOS.findIndex(p => p.id === scenario);
-        const next = e.key === 'ArrowRight' ? (index + 1) % 7 : e.key === 'ArrowLeft' ? (index + 6) % 7 : e.key === 'Home' ? 0 : e.key === 'End' ? 6 : -1;
-        if (next >= 0) { e.preventDefault(); changeScenario(SCENARIOS[next].id); document.getElementById(`tab-${SCENARIOS[next].id}`)?.focus(); }
-      }}>{SCENARIOS.map((p, i) => <button role="tab" tabIndex={scenario === p.id ? 0 : -1} aria-selected={scenario === p.id} aria-controls="weather-scenario" id={`tab-${p.id}`} key={p.id} onClick={() => changeScenario(p.id)}><span>0{i + 1}</span>{p.name}</button>)}</div>
-      <section id="weather-scenario" role="tabpanel" aria-labelledby={`tab-${scenario}`}>
-        <div className="w-scenario"><div><span className="w-eyebrow">{preset.subtitle}</span><h2>{preset.question}</h2></div><div className="w-transport"><span className="w-clock">Day {sun.day} · {time(sun.hour*3600)}</span><button onClick={() => play(!playing)}>{playing ? 'Pause' : 'Play'}</button><select aria-label="Simulation speed" value={speed} onChange={e => setSpeed(Number(e.target.value))}>{[1, 10, 60, 600, 3600].map(v => <option key={v} value={v}>{v}×</option>)}</select><button onClick={() => { setReasoningEpoch(v=>v+1); setState(createWeather(designs)); select('W01'); }}>Reset fleet</button></div></div>
+      {showControls&&detailOpen&&<div className="recovery-conditions"><h2>Conditions</h2>{controls.map(c=><label key={c.key}>{c.label} · {conditions[c.key]} {c.unit}<input aria-label={c.label} type="range" min={c.min} max={c.max} step={c.step} value={conditions[c.key]} onChange={e=>setConditions(v=>({...v,[c.key]:Number(e.target.value)}))}/></label>)}</div>}
+      <section id="weather-scenario" aria-label="Fleet rehearsal">
+        <div className="w-scenario"><div><span className="w-eyebrow">{preset.subtitle}</span><h2>{preset.question}</h2></div></div>
         <div className="w-detail-switch" role="group" aria-label="Simulator detail level"><button aria-pressed={!detailOpen} onClick={()=>setDetailOpen(false)}>Fleet map</button><button aria-pressed={detailOpen} onClick={()=>setDetailOpen(true)}>3D recovery close-up</button><a href="#recovery-plan">Recovery plan ↓</a>{detailOpen && <label>Inspect node <select aria-label="Recovery node" value={selected} onChange={e=>select(e.target.value)}>{state.nodes.map(n=><option key={n.id} value={n.id}>{n.id} · {n.role}</option>)}</select></label>}</div>
-        {detailOpen ? <RecoveryLab key={selected} design={designs[node.role]} nodeId={selected} swell={conditions.swell} inverted={node.inverted} ingress={node.ingress} liveRighting={node.righting} onClose={()=>setDetailOpen(false)} /> : <div className="w-workspace">
+        {detailOpen ? <RecoveryLab key={selected} design={designs[node.role]} nodeId={selected} swell={conditions.swell} inverted={node.inverted} ingress={node.ingress} liveRighting={node.righting} fleetPlaying={playing} playbackSpeed={speed} onClose={()=>setDetailOpen(false)} /> : <div className="w-workspace">
           <section className="w-map-panel" aria-label="Fleet simulation">
-            <div className="w-map-top"><span><i className="w-live" />{playing ? 'SIMULATING' : 'PAUSED'}<b>{sun.ghi===0 ? 'NIGHT / PV OFF' : env.stowed ? 'SURVIVAL / STOW REQUESTED' : 'DAYLIGHT / PV ACTIVE'}</b></span><button aria-expanded={showControls} onClick={() => setShowControls(!showControls)}>Conditions {showControls ? '−' : '+'}</button></div>
+            <div className="w-map-top"><span><i className="w-live" />{playing ? 'SIMULATING' : 'PAUSED'}<b>{sun.ghi===0 ? 'NIGHT / PV OFF' : env.stowed ? 'SURVIVAL / STOW REQUESTED' : 'DAYLIGHT / PV ACTIVE'}</b></span></div>
             <svg ref={svg} className="w-map" viewBox={`0 0 ${mapSize.width} ${mapSize.height}`} role="img" aria-label="Interactive fleet map. Select a node, then drag it to test separation. Keyboard users can use the node selector and displacement button." onPointerMove={e => { if (dragging.current) pointerPosition(e); }} onPointerUp={finishDrag} onPointerCancel={finishDrag}>
               <defs><pattern id="ocean-grid" x={gridX%gridSize} y={gridY%gridSize} width={gridSize} height={gridSize} patternUnits="userSpaceOnUse"><path d={`M${gridSize} 0H0V${gridSize}`} fill="none" stroke="#9db4d3" strokeOpacity=".1" /></pattern><radialGradient id="ocean-glow"><stop stopColor={sun.ghi===0 ? '#0b1223' : '#142136'} /><stop offset="1" stopColor="#090f1e" /></radialGradient><pattern id="rain-lines" width="32" height="45" patternUnits="userSpaceOnUse"><path d="M10 0L0 25" stroke="#9db4d3" strokeOpacity=".18" /></pattern></defs>
               <rect width={mapSize.width} height={mapSize.height} fill="url(#ocean-glow)" /><rect width={mapSize.width} height={mapSize.height} fill="url(#ocean-grid)" />
@@ -121,8 +126,8 @@ export function WeatherApp({ reasoning = false }: { reasoning?: boolean }) {
               {conditions.rain > 0 && <rect width={mapSize.width} height={mapSize.height} fill="url(#rain-lines)" opacity={conditions.rain / 60} />}
               <ellipse cx={mx} cy={my} rx={env.range / camera.metersPerUnit} ry={env.range / camera.metersPerUnit} fill="#9db4d3" fillOpacity=".025" stroke="#9db4d3" strokeOpacity=".35" strokeDasharray="5 7" />
               <text x={mx} y={my - env.range / camera.metersPerUnit - 12} textAnchor="middle" fill="#9db4d3" fontSize="12">ASSUMED DIRECT LINK · {env.range.toFixed(0)} m</text>
-              {net.edges.map(([a, b]) => { const na = state.nodes.find(n => n.id === a)!, nb = state.nodes.find(n => n.id === b)!; const [x1, y1] = pos(na.x, na.y), [x2, y2] = pos(nb.x, nb.y); return <line key={`${a}-${b}`} x1={x1} y1={y1} x2={x2} y2={y2} stroke={net.connected.has(a) ? '#9db4d3' : '#ffc247'} strokeOpacity=".12" />; })}
-              {state.rescue?.report && (()=>{
+              {net.edges.map(([a, b]) => { const na = displayNodes.find(n => n.id === a)!, nb = displayNodes.find(n => n.id === b)!; const [x1, y1] = pos(na.x, na.y), [x2, y2] = pos(nb.x, nb.y); return <line key={`${a}-${b}`} x1={x1} y1={y1} x2={x2} y2={y2} stroke={net.connected.has(a) ? '#9db4d3' : '#ffc247'} strokeOpacity=".12" />; })}
+              {state.rescue?.report && !state.nodes.find(n=>n.id===state.rescue?.targetId)?.displayAnchor && (()=>{
                 const rescue=state.rescue, report=rescue.report!;
                 const [x,y]=pos(report.x,report.y);
                 const path=[{x:master.x,y:master.y},...rescue.waypoints,{x:report.x,y:report.y}].map(p=>pos(p.x,p.y).join(',')).join(' ');
@@ -134,25 +139,26 @@ export function WeatherApp({ reasoning = false }: { reasoning?: boolean }) {
                 </g>;
               })()}
               {state.wildlife && <g transform="translate(610 240)"><ellipse rx="65" ry="20" fill="#99b6c7" opacity=".4" /><path d="M-55 0l-30 -20 6 20 -6 20z" fill="#99b6c7" opacity=".5" /><text y="48" textAnchor="middle" fill="#d4dde5" fontSize="12">WILDLIFE HOLD · FLEET-WIDE</text></g>}
-              {state.nodes.map(n => { const [x, y] = pos(n.x, n.y); const chosen = selected === n.id; const roll = n.inverted ? n.righting.rollDeg : Math.sin(state.t * 2 * Math.PI / conditions.period + n.homeX) * Math.min(30, conditions.swell * 5); return <g key={n.id} data-node-id={n.id} transform={`translate(${x} ${y})`} onPointerDown={e => { e.preventDefault(); select(n.id); dragging.current = n.id; dragCamera.current=camera; svg.current!.setPointerCapture(e.pointerId); }} style={{ cursor: 'grab' }}>
+              {displayNodes.map(n => { const [x, y] = pos(n.x, n.y); const chosen = selected === n.id; const roll = n.displayAnchor ? 0 : n.inverted ? n.righting.rollDeg : Math.sin(state.t * 2 * Math.PI / conditions.period + n.homeX) * Math.min(30, conditions.swell * 5); return <g key={n.id} data-node-id={n.id} transform={`translate(${x} ${y})`} onPointerDown={e => { e.preventDefault(); select(n.id); if(n.displayAnchor)return; dragging.current = n.id; dragCamera.current=camera; svg.current!.setPointerCapture(e.pointerId); }} style={{ cursor: n.displayAnchor ? 'pointer' : 'grab' }}>
                 {state.rescue?.escortIds.includes(n.id)&&<circle r="30" fill="none" stroke="#ffc247" strokeOpacity=".7" />}
                 <title>{n.id} · {n.mode}{n.inverted?` · ${n.righting.phase}`:''}</title>
                 {n.righting.inflation>0&&<ellipse cx="-22" cy="-9" rx={9*n.righting.inflation} ry={13*n.righting.inflation} fill="#dca35f" stroke="#f0d5a9" />}
                 {n.mode==='Self-righting'&&<circle r="33" fill="none" stroke="#ffc247" strokeWidth="2" strokeDasharray={`${n.righting.progress*207} 207`} transform="rotate(-90)" />}
                 <circle r={chosen ? 27 : 21} fill={chosen ? '#ffc247' : '#9db4d3'} fillOpacity={chosen ? '.1' : '.03'} stroke={chosen ? '#ffc247' : 'none'} />
                 <g transform={`rotate(${roll})`}><path d="M-16 -6L-6 -16H6L16 -6V6L6 16H-6L-16 6Z" fill={n.inverted ? '#5c3438' : '#293443'} stroke={color(n.mode)} strokeWidth="1.5" /><path d="M-12 0H12M0 -12V12M-9 -9L9 9M9 -9L-9 9" stroke={color(n.mode)} strokeOpacity=".45" /><rect x="-6" y="-6" width="12" height="12" rx="2" fill={n.role === 'master' ? '#ffc247' : color(n.mode)} /></g>
-                <text y="43" textAnchor="middle" fill={chosen ? '#fff' : '#9db4d3'} fontSize="12">{n.id === 'M' ? 'MASTER' : n.id}{n.inverted ? n.righting.phase==='Failed'?' · INVERTED':` · ${n.righting.phase.toUpperCase()}` : n.reserveHold?' · RESERVE':''}</text>
+                <text y="43" textAnchor="middle" fill={chosen ? '#fff' : '#9db4d3'} fontSize="12">{n.id === 'M' ? 'MASTER' : n.id}{n.displayAnchor ? ' · DEAD / RETRIEVE' : n.inverted ? n.righting.phase==='Failed'?' · INVERTED':` · ${n.righting.phase.toUpperCase()}` : n.reserveHold?' · RESERVE':''}</text>
                 {!net.connected.has(n.id) && <circle cx="19" cy="-19" r="4" fill="#ff6b6b" />}
               </g>; })}
               <g transform={`translate(${mapSize.width-45} 45)`} fill="#9db4d3"><text x="0" y="-22" textAnchor="middle" fontSize="12">N</text><path d="M0 -12L-5 7 0 3 5 7Z" /><text y="35" textAnchor="middle" fontSize="11">E →</text></g>
               <g transform={`translate(35 ${mapSize.height-45})`} fill="#9db4d3"><path d={`M0 -5V5M0 0H${gridSize}M${gridSize} -5V5`} stroke="#9db4d3" /><text x={gridSize/2} y="24" textAnchor="middle" fontSize="12">{camera.gridM} m</text></g>
             </svg>
-            <div className="w-map-bottom"><span>Drag any node · grid {camera.gridM} m</span><span>Auto-fit · all {state.nodes.length} nodes visible</span></div>
+            <div className="w-map-bottom"><span>Drag active nodes · grid {camera.gridM} m</span><span>Auto-fit · all {state.nodes.length} nodes visible</span></div>
             {showControls && <div className="w-conditions"><div className="w-eyebrow">EDIT THIS SCENARIO</div>{controls.map(c => <label key={c.key}>{c.label}<output>{conditions[c.key].toFixed(c.step < 1 ? 2 : 0)} {c.unit}</output><input type="range" min={c.min} max={c.max} step={c.step} value={conditions[c.key]} onChange={e => setConditions(v => ({ ...v, [c.key]: Number(e.target.value) }))} /></label>)}<p>Scenario changes reset the fleet and conditions. Reset fleet preserves your conditions.</p></div>}
           </section>
           <aside className="w-inspector">
-            <div className="w-inspector-title"><span className="w-eyebrow">NODE TELEMETRY</span><select aria-label="Selected node" value={selected} onChange={e => select(e.target.value)}>{state.nodes.map(n => <option key={n.id}>{n.id}</option>)}</select></div>
-            <div className="w-node-heading"><h2>{node.role === 'master' ? 'Master' : `Worker ${selected.slice(1)}`}</h2><span style={{ color: color(node.mode) }}>{node.mode}</span></div>
+            <div className="w-inspector-title"><span className="w-eyebrow">NODE TELEMETRY · {selected}</span></div>
+            <div className="w-node-heading"><h2>{node.role === 'master' ? 'Master' : `Worker ${selected.slice(1)}`}</h2><span style={{ color: color(node.mode) }}>{node.displayAnchor ? "Dead / retrieval required" : node.mode}</span></div>
+            {node.displayAnchor&&<p className="w-note terminal-note">Permanently disabled. Marker frozen at the failure location for this lesson; physical drift continues in the underlying model. Reset fleet represents recovery.</p>}
             {(!playing&&(node.inverted||node.reserveHold))&&<p className="w-note">Paused — press Play to advance automatic recovery and sunlight.</p>}
             {node.righting.phase!=='Ready'&&<div className="w-righting-status">Righting: {node.righting.phase} · {Math.round(node.righting.elapsedS)} / 60 s<br />{node.righting.phase==='Upright'?'Upright; bag deployed, service required':node.righting.phase==='Failed'?'Attempt failed; physical retrieval required':'Conditional automatic mechanism sequence'}</div>}
             <div className="w-battery"><span style={{ width: `${soc * 100}%`, background: soc < .25 ? '#ffc247' : '#d5dfe0' }} /></div>

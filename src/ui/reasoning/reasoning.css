@@ -2,3 +2,4 @@
 .muse-toolbar label{white-space:nowrap}.muse-toolbar input[type=checkbox]{width:14px;height:14px;margin:0;flex:none;accent-color:var(--accent)}
 .muse-feedback{display:flex;flex-wrap:wrap;gap:20px;margin-top:20px;padding:14px;background:#0b1423;color:var(--dim);font-size:11px}.muse-feedback b{color:var(--ink);margin-left:8px;font-size:13px}
 .muse-inject{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:20px}.muse-inject>span{color:var(--accent);font-size:12px}.muse-inject small{color:var(--dim);font-size:11px}
+.muse-collapse { margin-top:12px; }.muse-title h2 { font-size:24px; }.muse-panel { background:#091224; }.muse-flow>div { border-radius:8px; }

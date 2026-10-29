@@ -21,7 +21,8 @@ Optional starting view from the address bar: `?cam=x,y,z&target=x,y,z&explode=n0
 
 ## What you see
 
-- **First screen:** the swarm on a 3D ocean under a 3D cloud layer, with the value up front: energy harvested, compute delivered, revenue and carbon avoided for a daylight day, each compared with a swarm that only holds station. Scale buttons show the same numbers at 100, 1,000 and 10,000 nodes. The detailed controls live behind the **Controls** button.
+- **Explore:** the home page introduces four connected views through clickable visual previews: Swarm, Unit Bench, Muse Reasoning and Weather Simulator. Hover or focus a preview for context; on mobile, descriptions stay visible.
+- **Swarm (`?view=swarm`):** the swarm on a 3D ocean under a 3D cloud layer, with the value up front: energy harvested, compute delivered, revenue and carbon avoided for a daylight day, each compared with a swarm that only holds station. Scale buttons show the same numbers at 100, 1,000 and 10,000 nodes. The detailed controls live behind the **Controls** button.
 - **Move around:** drag to orbit, Shift + left-drag (or right-drag) to pan, and scroll to zoom from the whole swarm down to one node, and dive below the surface (to 15 m) to see hulls, keels and thrusters from underneath.
 - **Playback:** 1×, 2× and 5× allow slow inspection alongside the faster simulation speeds.
 - **Hardware scale:** one scene unit is one meter. Black cell-pattern PV panels meet physical hinges and support struts. Battery packs, compute enclosures, heat exchanger, antennas and thrusters have distinct geometry and mounts. Inspection offers assembled and exploded views, equipment dimensions in millimeters, and a one-meter scale bar. Equipment envelopes and the exposed GPU modules are representative estimates, not manufacturer CAD; the assembled compute remains in its sealed enclosure.
@@ -107,7 +108,7 @@ When conditions permit, up to three healthy connected workers (35% minimum charg
 
 ### Site navigation
 
-The main landing page is [Marine Compute Swarm](https://marine-compute-swarm.vercel.app/). Use the three-line **Menu** button in the top title bar to open Swarm, Master Unit Bench, Worker Unit Bench, Weather Simulator, Master Recovery Close-up or Worker Recovery Close-up. The title bar identifies your current page and stays available throughout the site. The earlier `solar-swarm.vercel.app` address is retained as a compatibility redirect.
+The [home page](https://marine-compute-swarm.vercel.app/) introduces the project through four visual previews. Menu contains Swarm, Unit Bench, Muse Reasoning and Weather Simulator. Switch master/worker inside Unit Bench; open recovery close-ups inside Weather Simulator. Branding returns to home. Each simulator shares a fixed playback bar with speed, simulation time and browser display FPS. On mobile, module tools open under View options. Daily impact and analysis panels can be minimized or closed. The earlier `solar-swarm.vercel.app` address remains a compatibility redirect.
 
 
 ### Autonomous recovery on the fleet map
@@ -123,3 +124,6 @@ The 2D map always fits every node automatically. Its world-aligned grid and scal
 Open `?view=reasoning` or Menu → Muse Reasoning to inspect the fleet observation → escalation → Muse → validation → local execution pipeline. Inject failures using the same weather rehearsal controls below it. Local demo mode requires no credentials; shadow mode is the default. Enable automatic escalation and strategy execution separately to test the coordinator in the simulation.
 
 For live Meta calls, copy `.env.example` to `.env.local`, set `MODEL_API_KEY` and a private `MUSE_ACCESS_TOKEN`, then restart `npm run dev`. Select Meta Muse Wonder and enter only the dashboard access token in the page. `MUSE_MODEL` defaults to `muse-wonder-1.0`. Set the same environment variables in Vercel for deployed use. Never use a `VITE_` variable for secrets. See [harness design and limits](docs/design/2026-10-28-muse-reasoning-harness.md) for the action catalog, budgets, trace export and validation boundaries.
+
+
+Terminal failures in the educational fleet map are labeled DEAD / RETRIEVE and pinned at their failure location. Underlying physical drift and distress telemetry remain simulated independently. Low charge and lost radio contact remain recoverable conditions. Unit Bench pause freezes waves, particles and the segmentation pipeline; inspection changes can refresh a still analysis.

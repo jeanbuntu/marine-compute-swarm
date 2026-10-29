@@ -96,3 +96,17 @@ test('paused failure refresh updates status and telemetry without advancing time
   expect(next.nodes[1].mode).toBe('Self-righting');
   expect(next.nodes[1].pvW).toBe(0);
 });
+
+test('terminal failure pins the teaching marker while physical drift and telemetry stay independent', () => {
+  const designs = {master:masterDesign(),worker:workerDesign()};
+  let state=createWeather(designs);
+  state.nodes[1].ingress=true;
+  const c=SCENARIOS[0].conditions;
+  state=stepWeather(state,c,'day',0,designs);
+  const anchor=state.nodes[1].displayAnchor!;
+  expect(anchor).toEqual({x:state.nodes[1].x,y:state.nodes[1].y});
+  state=stepWeather(state,c,'day',60,designs);
+  expect(state.nodes[1].displayAnchor).toEqual(anchor);
+  expect(state.nodes[1].x).not.toBe(anchor.x);
+  expect(state.nodes[2].displayAnchor).toBeUndefined();
+});

@@ -36,10 +36,10 @@ export function FlowParticles() {
   const draft = useMemo(() => evaluate(msim.design, 'deployed').draftM, []);
 
   useFrame((_, dtRaw) => {
-    const dt = Math.min(dtRaw, 0.05) * msim.params.physSpeed;
+    const dt = Math.min(dtRaw, 0.05) * msim.params.physSpeed * useMaster.getState().speed;
     const show = useMaster.getState().particles;
     st.lines.visible = show;
-    if (!show || dt <= 0) return;
+    if (!show || useMaster.getState().paused || dt <= 0) return;
     const { pos, vel, life, rnd } = st;
     const t = msim.tPhys, sea = msim.sea, cx = msim.pos[0], cz = msim.pos[1];
     const cur = [msim.params.currentEastMs, 0, -msim.params.currentNorthMs];

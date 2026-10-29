@@ -8,7 +8,9 @@ const SCALES = [100, 1000, 10000];
 /** The headline: what a day of this swarm delivers, and what it would add up to at scale. */
 export function ImpactStrip() {
   const inspecting = useStore((s) => !!s.explodedNodeId);
+  const [expanded, setExpanded] = useState(() => typeof window === 'undefined' || window.innerWidth >= 700);
   const [showDuringInspection, setShowDuringInspection] = useState(false);
+  const visible = expanded && (!inspecting || showDuringInspection);
   const config = useStore((s) => s.config);
   const designs = useStore((s) => s.designs);
   const { result, loading } = useImpact(config, designs);
@@ -23,14 +25,10 @@ export function ImpactStrip() {
   ];
   const year = s ? annualize(s, config.nodes, scale) : null;
 
-  if (inspecting && !showDuringInspection) return (
-    <div className="panel" style={{ left: 320, top: 16, padding: 8 }}>
-      <button onClick={() => setShowDuringInspection(true)}>Show impact</button>
-    </div>
-  );
   return (
-    <section className="panel impact" aria-label="Impact" style={{ opacity: loading ? 0.75 : 1 }}>
-      {inspecting && <button onClick={() => setShowDuringInspection(false)}>Hide impact</button>}
+    <section className={`panel impact ${!visible ? 'impact-collapsed' : ''}`} aria-label="Impact" style={{ opacity: loading ? 0.75 : 1 }}>
+      <button className="impact-toggle" aria-expanded={visible} onClick={() => { if (inspecting) { setShowDuringInspection(!visible); setExpanded(true); } else setExpanded(!expanded); }}>Daily impact {visible ? '−' : '+'}</button>
+      {visible && <>
       <div className="dim" style={{ marginBottom: 6 }}>
         One daylight day, {config.nodes} nodes <span className="est">EST</span> {loading && <span>· updating…</span>}
       </div>
@@ -58,6 +56,7 @@ export function ImpactStrip() {
         )}
       </div>
       <div className="dim small" style={{ marginTop: 4 }}>Assumes this day repeats all year. Percentages compare with a swarm that only holds station in the same weather.</div>
+      </>}
     </section>
   );
 }

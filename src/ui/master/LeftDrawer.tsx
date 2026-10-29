@@ -5,7 +5,7 @@ import { Check, Section, Seg, Slider, useTick } from './controls';
 
 interface Scenario { name: string; hint: string; patch(p: MasterParams): Partial<MasterParams> }
 const manual = (p: MasterParams, az: number, el: number) => ({ ...p.sun, mode: 'manual' as const, azDeg: az, elevDeg: el });
-const SCENARIOS: Scenario[] = [
+export const UNIT_SCENARIOS: Scenario[] = [
   { name: 'Dawn, calm', hint: 'Sun low in the east: west petal rises, east petal lowers', patch: (p) => ({ sun: manual(p, 95, 12), sea: { ...p.sea, ...SEA_PRESETS.calm }, windMs: 3 }) },
   { name: 'Morning swell', hint: 'Long swell rolls the hull while petals chase the sun', patch: (p) => ({ sun: manual(p, 120, 35), sea: { ...p.sea, ...SEA_PRESETS.swell }, windMs: 6 }) },
   { name: 'Noon overhead', hint: 'Sun near the zenith: petals go nearly flat', patch: (p) => ({ sun: manual(p, 180, 78), sea: { ...p.sea, ...SEA_PRESETS.swell }, windMs: 5 }) },
@@ -19,11 +19,10 @@ export function LeftDrawer() {
   const s = useMaster(), p = s.params;
   const hour = ((msim.tSky / 3600) % 24 + 24) % 24;
   return (
-    <aside className="panel mleft" aria-label="Conditions">
-      <Section title="Scenarios">
-        <div className="mscen">
-          {SCENARIOS.map((sc) => <button key={sc.name} title={sc.hint} onClick={() => { s.setParams(sc.patch(msim.params)); }}>{sc.name}</button>)}
-        </div>
+    <aside className="panel mleft" aria-label="Advanced conditions">
+      <button onClick={() => s.set({ controlsOpen: false })}>Close conditions</button>
+      <Section title="Scenario">
+        <p className="dim small">Choose a preset in the Conditions dropdown above, then refine it here.</p>
         <button onClick={() => { msim.resetMotion(); s.setParams({}); }}>Reset position and hull</button>
       </Section>
 
@@ -94,4 +93,12 @@ export function LeftDrawer() {
       </Section>
     </aside>
   );
+}
+
+export function ScenarioSelect() {
+  const s = useMaster();
+  return <label className="toolbar-field">Conditions<select aria-label="Conditions" value={s.scenario} onChange={e => {
+    const scenario = UNIT_SCENARIOS.find(sc => sc.name === e.target.value);
+    if (scenario) { s.setParams(scenario.patch(msim.params)); s.set({ scenario: scenario.name }); }
+  }}><option value="Custom">Custom</option>{UNIT_SCENARIOS.map(sc => <option key={sc.name} value={sc.name}>{sc.name}</option>)}</select></label>;
 }

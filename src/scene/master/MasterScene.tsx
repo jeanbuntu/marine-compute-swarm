@@ -15,7 +15,7 @@ const RAD = Math.PI / 180;
 /** Steps the master simulation before anything else reads it each frame. */
 function MasterDriver() {
   useFrame((_, dt) => {
-    if (!useMaster.getState().paused) msim.step(dt);
+    if (!useMaster.getState().paused) msim.step(dt * useMaster.getState().speed);
   }, -1);
   return null;
 }
@@ -46,7 +46,7 @@ export function MasterScene() {
       if (!rect || x < rect.x || x > rect.x + rect.w || y < rect.y || y > rect.y + rect.h) state.pointer.set(10000, 10000);
       else state.pointer.set(2 * (x - rect.x) / rect.w - 1, 1 - 2 * (y - rect.y) / rect.h);
       state.raycaster.setFromCamera(state.pointer, state.camera);
-    } })} gl={{ antialias: true }} dpr={[1, 2]} camera={{ position: [3, 1.5, 3.4], fov: 50, near: 0.05, far: 60000 }}>
+    } })} gl={{ antialias: true }} dpr={[1, window.matchMedia?.("(pointer: coarse)").matches ? 1.25 : 2]} camera={{ position: [3, 1.5, 3.4], fov: 50, near: 0.05, far: 60000 }}>
       <MasterDriver />
       <Lights />
       <SkyDome />

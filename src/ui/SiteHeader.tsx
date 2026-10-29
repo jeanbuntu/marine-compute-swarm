@@ -1,20 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 
 export const SITE_PAGES = [
-  { id: 'swarm', name: 'Swarm', href: '/', description: 'Project overview & live fleet' },
-  { id: 'master', name: 'Master Unit Bench', href: '/?view=unit&role=master', description: 'Inspect the coordinator hardware' },
-  { id: 'worker', name: 'Worker Unit Bench', href: '/?view=unit&role=worker', description: 'Inspect a worker node' },
-  { id: 'reasoning', name: 'Muse Reasoning', href: '/?view=reasoning', description: 'Inspect adaptive fleet decisions' },
-  { id: 'weather', name: 'Weather Simulator', href: '/?view=weather', description: 'Weather, failures & recovery plans' },
-  { id: 'master-recovery', name: 'Master Recovery Close-up', href: '/?view=weather&inspect=master', description: 'Explore the master righting mechanism' },
-  { id: 'worker-recovery', name: 'Worker Recovery Close-up', href: '/?view=weather&inspect=worker', description: 'Explore worker recovery hardware' },
+  { id: 'swarm', name: 'Swarm', href: '/?view=swarm', description: 'Follow sunlight, energy & fleet compute' },
+  { id: 'unit', name: 'Unit Bench', href: '/?view=unit', description: 'Inspect master and worker hardware' },
+  { id: 'reasoning', name: 'Muse Reasoning', href: '/?view=reasoning', description: 'Observe and test fleet decisions' },
+  { id: 'weather', name: 'Weather Simulator', href: '/?view=weather', description: 'Rehearse weather, failures & recovery' },
 ] as const;
-export type SitePage = typeof SITE_PAGES[number]['id'];
+export type SitePage = typeof SITE_PAGES[number]['id'] | 'home';
 
 export function SiteHeader({ page }: { page: SitePage }) {
   const [open, setOpen] = useState(false);
   const header = useRef<HTMLElement>(null), button = useRef<HTMLButtonElement>(null), nav = useRef<HTMLElement>(null);
-  const current = SITE_PAGES.find(p => p.id === page)!;
+  const current = SITE_PAGES.find(p => p.id === page) ?? { name: 'Explore' };
   useEffect(() => { document.title = `${current.name} · Marine Compute Swarm`; }, [current.name]);
   useEffect(() => {
     if (!open) return;

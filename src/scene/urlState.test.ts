@@ -11,7 +11,7 @@ describe('readView', () => {
   it('opens the master bench only when asked', async () => {
     const { readView } = await import('./urlState');
     expect(readView('?view=master')).toBe('master');
-    expect(readView('')).toBe('swarm');
-    expect(readView('?view=other')).toBe('swarm');
+    expect(readView('')).toBe('home');
+    expect(readView('?view=other')).toBe('home');
   });
 });

@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { msim, useMaster } from '../../state/master';
-import { LeftDrawer } from './LeftDrawer';
+import { LeftDrawer, ScenarioSelect } from './LeftDrawer';
 import { PetalsTab } from './PetalsTab';
 import { PropulsionTab } from './PropulsionTab';
 
@@ -18,9 +18,9 @@ describe('master panels', () => {
     render(<PropulsionTab />);
     expect(screen.getByText(/No yaw authority/)).toBeTruthy();
   });
-  it('a scenario button changes the simulation conditions', () => {
-    render(<LeftDrawer />);
-    fireEvent.click(screen.getByText('Storm'));
+  it('a scenario dropdown changes the simulation conditions', () => {
+    render(<><ScenarioSelect /><LeftDrawer /></>);
+    fireEvent.change(screen.getByLabelText('Conditions'), { target: { value: 'Storm' } });
     expect(useMaster.getState().params.windMs).toBe(18);
     expect(msim.params.sea.hsM).toBeCloseTo(3.5, 5);
     expect(msim.params.sun.mode).toBe('manual');

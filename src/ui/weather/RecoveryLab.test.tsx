@@ -24,7 +24,7 @@ test('hardware selection switches detail and exposes component rationale',()=>{
 test('live close-up follows the actual fleet righting state rather than a second animation',()=>{
   const live={phase:'Rolling' as const,elapsedS:40,progress:.72,rollDeg:80,inflation:1,gasAvailable:false};
   const {rerender}=render(<RecoveryLab design={workerDesign()} nodeId="W01" swell={0} inverted ingress={false} liveRighting={live} onClose={()=>{}} />);
-  expect(screen.getByRole('button',{name:'Play recovery'})).toBeDisabled();
+  expect(screen.getByRole('button',{name:'Play replay'})).toBeDisabled();
   expect(screen.getByText('ROLLING · LIVE')).toBeInTheDocument();
   rerender(<RecoveryLab design={workerDesign()} nodeId="W01" swell={0} inverted={false} ingress={false} liveRighting={{...live,phase:'Upright',progress:1,rollDeg:0,elapsedS:60}} onClose={()=>{}} />);
   expect(screen.getByText('UPRIGHT · LIVE')).toBeInTheDocument();

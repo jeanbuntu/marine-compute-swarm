@@ -22,18 +22,19 @@ export function MasterCamera() {
   const view = useMaster((s) => s.view);
   const focusRequest = useMaster(s => s.focusRequest);
   const exploded = useMaster(s => s.exploded);
-  const { camera } = useThree();
+  const { camera, size } = useThree();
 
   useEffect(() => {
     const c = controls.current;
     if (!c || view === 'sky') return;
     const [ox, oy, oz, ty] = PRESETS[view];
-    const scale = exploded ? 1.6 : 1, lift = exploded ? 2.1 : 0;
+    const fit = Math.max(1, Math.min(2.2, size.height / size.width));
+    const scale = (exploded ? 1.6 : 1) * fit, lift = exploded ? 2.1 : 0;
     camera.position.set(msim.pos[0] + ox * scale, oy * scale + lift, msim.pos[1] + oz * scale);
     c.target.set(msim.pos[0], ty + lift, msim.pos[1]);
     c.update();
     prev.current = [msim.pos[0], msim.pos[1]];
-  }, [view, camera, exploded]);
+  }, [view, camera, exploded, size.width, size.height]);
 
   useEffect(() => {
     const c = controls.current;

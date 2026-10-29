@@ -46,3 +46,9 @@
 @media (max-width: 719px) { .mtop { height: 136px; min-height: 0; } .mtop button { padding: 5px 8px; } }
 
 @media (max-width: 479px) { .mtop { height: 192px; } }
+/* The shared toolbar occupies its own space; scene and overlay share the remaining box. */
+.mroot { inset:var(--workspace-top) 0 0; }
+.mleft,.mright { top:8px; bottom:8px; }
+.mleft { width:322px; }.mright { width:382px; }
+@media(max-width:899px) { .mleft,.mright { top:auto; bottom:8px; left:8px; right:8px; width:auto; height:min(42%,340px); } }
+.mright>button:first-child { margin-bottom:10px; }

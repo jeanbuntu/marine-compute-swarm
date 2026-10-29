@@ -4,7 +4,7 @@ import { OrthographicCamera, Vector3 } from 'three';
 import { useStore } from '../state/store';
 import { sim } from '../state/sim';
 import { FOOTPRINT_M } from '../model/tracker';
-import { CAM } from '../ui/camPanel';
+import { cameraPanelRect } from '../ui/camPanel';
 
 const _up = new Vector3(0, 0, -1); // north is up in the picture
 
@@ -30,6 +30,7 @@ export function NodeCameraView() {
     cam.lookAt(n.pos[0], 100, -n.pos[1]);
     cam.updateMatrixWorld();
     gl.setScissorTest(true);
+    const CAM = cameraPanelRect(size.width,size.height);
     gl.setScissor(CAM.left, CAM.bottom, CAM.size, CAM.size);
     gl.setViewport(CAM.left, CAM.bottom, CAM.size, CAM.size);
     gl.clearDepth();

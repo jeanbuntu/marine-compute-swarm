@@ -30,6 +30,8 @@ interface MasterUi {
   view: ViewMode;
   pip: boolean;
   paused: boolean;
+  speed: number;
+  scenario: string;
   cutaway: boolean;
   particles: boolean;
   normals: boolean;
@@ -63,14 +65,14 @@ const startView = (['close', 'under', 'top', 'sky'] as const).find((v) => v === 
 const startTab = (['petals', 'propulsion', 'sky'] as const).find((v) => v === q.get('tab')) ?? 'petals';
 
 export const useMaster = create<MasterUi>((set, get) => ({
-  role: initialRole, controlsOpen: false, analysisOpen: typeof window !== 'undefined' && window.innerWidth >= 1100, dimensions: false, exploded: false, selectedPart: 'hull-shell', focusRequest: 0,
+  role: initialRole, controlsOpen: false, analysisOpen: false, dimensions: false, exploded: false, selectedPart: 'hull-shell', focusRequest: 0,
   setRole(role) {
     msim.design = useStore.getState().designs[role]; msim.rebuild(); msim.resetMotion(); msim.step(0);
     set({ role, selectedPart: 'hull-shell', analysis: null, imported: null });
     const url = new URL(window.location.href); url.searchParams.set('view', 'unit'); url.searchParams.set('role', role);
     window.history.replaceState(null, '', url);
   },
-  params: msim.params, view: startView, pip: true, paused: false, cutaway: true, particles: true, normals: true, tab: startTab,
+  params: msim.params, view: startView, pip: true, paused: false, speed: 1, scenario: 'Custom', cutaway: true, particles: true, normals: true, tab: startTab,
   lens: defaultLens(), seg: defaultSeg(), prompt: 'clouds', model: 'SAM 3.1',
   layers: { gt: true, dets: true, tracks: true, compass: true, sun: true },
   analysis: null, imported: null, exportFrame: null, exportRequest: 0, error: null,
@@ -88,7 +90,7 @@ export const LEFT_W = 330, RIGHT_W = 390, TOP_H = 56;
 export function layoutRects(w: number, h: number, view: ViewMode, pip: boolean): { main: Rect; fisheye: Rect | null; scene: Rect | null } {
   const ui = useMaster.getState(); pip = pip && !ui.exploded;
   const compact = w < 900;
-  const top = w < 480 ? 200 : w < 720 ? 144 : w < 1280 ? 96 : TOP_H;
+  const top = 0;
   const left = !compact && ui.controlsOpen ? LEFT_W : 0, right = !compact && ui.analysisOpen ? RIGHT_W : 0;
   const bottom = compact && (ui.controlsOpen || ui.analysisOpen) ? Math.min(340, h * 0.42) + 8 : 0;
   const cx = left + 8, cw = Math.max(120, w - left - right - 16), cy = top + 8, ch = Math.max(120, h - top - bottom - 16);

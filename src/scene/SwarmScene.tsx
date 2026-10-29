@@ -18,6 +18,7 @@ export function SwarmScene() {
   }, []);
   return (
     <Canvas
+      dpr={[1, window.matchMedia?.("(pointer: coarse)").matches ? 1.25 : 2]}
       gl={{ antialias: true, logarithmicDepthBuffer: true }}
       camera={{ position: START.cam ?? [220, 80, 260], fov: 50, near: 0.1, far: 300000 }}
       onPointerMissed={() => useStore.getState().hover(null)}

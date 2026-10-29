@@ -2,14 +2,22 @@ import { useEffect, useState } from 'react';
 import { useStore } from '../state/store';
 import { sim } from '../state/sim';
 import { FOOTPRINT_M } from '../model/tracker';
-import { CAM } from './camPanel';
+import { cameraPanelRect } from './camPanel';
 
 const FRAME_PX = 640; // tracker frame size
-const K = CAM.size / FRAME_PX;
 const ARROW_S = 90; // seconds of motion drawn as an arrow
 
 /** HTML overlay for the node camera picture: tracked-cloud boxes, motion arrows, and the navigator's reason. */
 export function NodeCameraPanel() {
+  const [bounds,setBounds] = useState({w:window.innerWidth,h:window.innerHeight});
+  useEffect(()=>{
+    const root=document.querySelector('[data-swarm-viewport]');
+    if(!root)return;
+    const measure=()=>{const r=root.getBoundingClientRect();if(r.width&&r.height)setBounds({w:r.width,h:r.height});};measure();
+    if(typeof ResizeObserver==='undefined')return;
+    const observer=new ResizeObserver(measure);observer.observe(root);return()=>observer.disconnect();
+  },[]);
+  const CAM=cameraPanelRect(bounds.w,bounds.h),K=CAM.size/FRAME_PX;
   const id = useStore((s) => s.selectedNodeId);
   const [, tick] = useState(0);
   useEffect(() => {
@@ -18,7 +26,7 @@ export function NodeCameraPanel() {
   }, []);
 
   if (!id) {
-    return <div className="panel" style={{ left: CAM.left, bottom: CAM.bottom, width: CAM.size }}><span className="dim">Select a node to see its sky camera.</span></div>;
+    return <div className="panel camera-placeholder" style={{ left: CAM.left, bottom: CAM.bottom, width: CAM.size }}><span className="dim">Select a node to see its sky camera.</span></div>;
   }
   const tracked = sim.lastTracked[id] ?? [];
   const cmd = sim.lastCmds.find((c) => c.nodeId === id);

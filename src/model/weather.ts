@@ -24,6 +24,8 @@ export const SCENARIOS: Scenario[] = [
 export type Mode = 'Holding' | 'Drifting' | 'Link grace' | 'Returning' | 'Retrieval' | 'Inverted' | 'Wildlife hold' | 'Power reserve' | 'Relay escort' | 'Self-righting' | 'Recovery escort' | 'Offline' | 'Reasoning hold';
 export interface WeatherNode {
   id: string; role: 'master' | 'worker'; x: number; y: number; homeX: number; homeY: number;
+  /** Teaching-view marker only. Physics and reports continue to use x/y. */
+  displayAnchor?: { x: number; y: number };
   righting: RightingState;
   reserveHold: boolean; beaconWh: number; beaconWaitS: number; lastSatelliteS: number | null;
   beaconStatus: 'Standby' | 'Mesh report' | 'Acquiring' | 'Satellite ACK' | 'Sky blocked' | 'Channel unavailable' | 'Reserve empty';
@@ -140,7 +142,9 @@ export function stepWeather(state: WeatherState, c: Conditions, scenario: Scenar
       const essentialW=d.parts.filter(p=>p.subsystem==='navigation' || ['mesh-radio','bms'].includes(p.id)).reduce((sum,p)=>sum+p.powerW,0);
       const load = mode === 'Offline' ? 0 : n.inverted ? 15 : n.reserveHold ? essentialW : loadW(d, thrustPowerW(Math.hypot(tx, ty))) - (soc < 0.25 || s.wildlife || relay || policy?.strategy==='conserve' || policy?.strategy==='hold' ? computeW : 0);
       const wh = stepBattery(n.wh, capacity, pv - load, h);
-      return { ...n, x: n.x + (tx + env.vx) * h, y: n.y + (ty + env.vy) * h, lostS, mode, wh, pvW: mode === 'Offline' ? 0 : pv, loadW: load };
+      const terminal = n.ingress || (n.inverted && n.righting.phase === 'Failed');
+      const displayAnchor = n.displayAnchor ?? (terminal ? { x: n.x, y: n.y } : undefined);
+      return { ...n, displayAnchor, x: n.x + (tx + env.vx) * h, y: n.y + (ty + env.vy) * h, lostS, mode, wh, pvW: mode === 'Offline' ? 0 : pv, loadW: load };
     });
     let next: WeatherState = { ...s, t: s.t + h, nodes, rescue };
     for(const n of nodes) {

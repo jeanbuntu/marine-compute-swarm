@@ -4,6 +4,7 @@ import { useStore } from '../state/store';
 import { evaluateWorst } from '../model/hydrostatics';
 
 beforeEach(() => {
+  window.history.replaceState(null, '', '/?view=swarm');
   useStore.getState().reset();
   useStore.getState().setConfig({ nodes: 3 });
 });
@@ -64,4 +65,12 @@ test('slow playback speeds are selectable', () => {
     fireEvent.change(screen.getByLabelText('Speed'), { target: { value: String(speed) } });
     expect(useStore.getState().speed).toBe(speed);
   }
+});
+
+test('daily impact can be minimized and restored', () => {
+  render(<App />);
+  fireEvent.click(screen.getByRole('button', {name:/Daily impact/}));
+  expect(screen.queryByText('Energy harvested')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', {name:/Daily impact/}));
+  expect(screen.getByText('Energy harvested')).toBeInTheDocument();
 });

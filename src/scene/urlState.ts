@@ -14,7 +14,8 @@ export function readUrlState(search: string): { cam: V3 | null; target: V3 | nul
 }
 
 /** Which top-level view the address asks for: ?view=master opens the master node bench. */
-export function readView(search: string): 'swarm' | 'master' | 'unit' | 'weather' | 'reasoning' {
-  const view = new URLSearchParams(search).get('view');
-  return view === 'master' || view === 'unit' || view === 'weather' || view === 'reasoning' ? view : 'swarm';
+export function readView(search: string): 'home' | 'swarm' | 'master' | 'unit' | 'weather' | 'reasoning' {
+  const q = new URLSearchParams(search), view = q.get('view');
+  if (view === 'swarm' || view === 'master' || view === 'unit' || view === 'weather' || view === 'reasoning') return view;
+  return ['cam', 'target', 'explode'].some(key=>q.has(key)) ? 'swarm' : 'home';
 }

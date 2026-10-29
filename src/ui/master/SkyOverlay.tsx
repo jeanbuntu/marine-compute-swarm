@@ -9,16 +9,20 @@ const pts = (p: Pt[], k: number) => p.map((q) => `${(q[0] * k).toFixed(1)},${(q[
 /** SVG layer over the fisheye rectangle: sky rings, compass, ground truth, masks, track ids and a pixel inspector. */
 export function SkyOverlay() {
   useTick(250);
-  const [win, setWin] = useState({ w: window.innerWidth, h: window.innerHeight });
+  const [win, setWin] = useState({ w: 0, h: 0 });
   const [hover, setHover] = useState<Pt | null>(null);
   useEffect(() => {
-    const f = () => setWin({ w: window.innerWidth, h: window.innerHeight });
-    window.addEventListener('resize', f);
-    return () => window.removeEventListener('resize', f);
+    const root = document.querySelector('.mroot');
+    if (!root) return;
+    const measure = () => { const r = root.getBoundingClientRect(); setWin({ w: r.width, h: r.height }); };
+    measure();
+    if (typeof ResizeObserver === 'undefined') { window.addEventListener('resize', measure); return () => window.removeEventListener('resize', measure); }
+    const observer = new ResizeObserver(measure); observer.observe(root);
+    return () => observer.disconnect();
   }, []);
   const s = useMaster();
   const R = layoutRects(win.w, win.h, s.view, s.pip).fisheye;
-  if (!R) return null;
+  if (!R || !win.w || !win.h) return null;
   const a = s.analysis, lens = s.lens, k = R.w / lens.sizePx, half = R.w / 2;
   const tel = msim.telemetry;
   const small = R.w < 360;
@@ -41,7 +45,7 @@ export function SkyOverlay() {
 
   return (
     <div style={{ position: 'absolute', left: R.x, top: R.y, width: R.w, height: R.h, pointerEvents: small ? 'none' : 'auto' }}>
-      <svg width={R.w} height={R.h} style={{ position: 'absolute', inset: 0, overflow: 'visible' }}>
+      <svg viewBox={`0 0 ${R.w} ${R.h}`} width={R.w} height={R.h} style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
         <circle cx={half} cy={half} r={half - 0.5} fill="none" stroke="rgba(160,200,255,0.35)" />
         {s.layers.compass && !small && <>
           {[30, 60].map((el) => <circle key={el} cx={half} cy={half} r={((90 - el) / (lens.fovDeg / 2)) * half} fill="none" stroke="rgba(255,255,255,0.12)" strokeDasharray="2 4" />)}
