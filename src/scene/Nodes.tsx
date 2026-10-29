@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
+import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { Group, Sprite, Vector3 } from 'three';
 import { Line } from '@react-three/drei';
 import { partPosition } from '../model/hydrostatics';
@@ -10,25 +11,28 @@ import { DimensionGuide } from './DimensionGuide';
 import { NodeModel } from './NodeModel';
 import { explodeOffsets, EXPLODE_FACTOR } from './explode';
 
+import { swarmIntro, SWARM_INTRO_DETAIL_M, SWARM_INTRO_NODES } from './swarmIntro';
 import { DETAIL_DIST_M, showDetail } from './lod';
 
-const MARKER_MIN_DIST_M = DETAIL_DIST_M;
 export const EXPLODED_LIFT_M = 1.8; // exploded nodes float above the water so no part is hidden by it
 const _v = new Vector3();
 
 /** Node ids are `n<i>`; hover ids are `<nodeId>` or `<nodeId>/<partId>`. */
-export function Nodes() {
-  const count = useStore((s) => s.config.nodes);
+export function Nodes({forceDetail=false}:{forceDetail?:boolean}) {
+  const config=useStore(s=>s.config),count=config.nodes;
+  const {size}=useThree();
+  const intro=swarmIntro(size.width/size.height,config.spacingM,count);
+  const markerStartDistance=Math.hypot(...intro.position.map((v,i)=>v-intro.target[i]))*1.25;
   return (
     <>
       {Array.from({ length: count }, (_, i) => (
-        <SwarmNode key={i} index={i} />
+        <SwarmNode key={i} index={i} forceDetail={forceDetail} markerStartDistance={markerStartDistance} />
       ))}
     </>
   );
 }
 
-function SwarmNode({ index }: { index: number }) {
+function SwarmNode({ index, forceDetail, markerStartDistance }: { index: number; forceDetail:boolean; markerStartDistance:number }) {
   const id = `n${index}`;
   const role = index === 0 ? 'master' : 'worker';
   const design = useStore((s) => s.designs[role]);
@@ -41,9 +45,9 @@ function SwarmNode({ index }: { index: number }) {
   const selectedPart = useStore((s) => s.selectedPartId);
   const { hover, explode, selectPart } = useStore.getState();
   const root = useRef<Group>(null);
-  const [near, setNear] = useState(false);
+  const [near, setNear] = useState(forceDetail);
   const marker = useRef<Sprite>(null);
-  const { camera } = useThree();
+  const { camera, controls } = useThree();
   const draft = useMemo(() => evaluate(design, 'deployed').draftM, [design]);
   const offsets = useMemo(() => (separated ? explodeOffsets(design.parts, EXPLODE_FACTOR) : {}), [separated, design]);
 
@@ -60,9 +64,14 @@ function SwarmNode({ index }: { index: number }) {
     root.current.position.set(n.pos[0], Math.sin(t * 0.9 + ph) * 0.04, -n.pos[1]);
     root.current.rotation.set(Math.sin(t * 0.7 + ph) * 0.02, 0, Math.cos(t * 0.8 + ph) * 0.02);
     const dist = camera.position.distanceTo(_v.set(n.pos[0], 0, -n.pos[1]));
-    const want = showDetail(dist, exploded, near);
+    const detailLimit = index < SWARM_INTRO_NODES ? SWARM_INTRO_DETAIL_M : DETAIL_DIST_M;
+    const want = forceDetail || showDetail(dist * DETAIL_DIST_M / detailLimit, exploded, near);
     if (want !== near) setNear(want);
-    if (marker.current) marker.current.visible = dist > MARKER_MIN_DIST_M && !exploded;
+    if (marker.current) {
+      const target=(controls as OrbitControlsImpl|null)?.target;
+      const overview=target?camera.position.distanceTo(target)>markerStartDistance:false;
+      marker.current.visible = !forceDetail && overview && dist > detailLimit && !exploded;
+    }
   });
 
   return (

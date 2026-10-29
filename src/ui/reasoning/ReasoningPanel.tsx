@@ -64,7 +64,7 @@ export function ReasoningPanel(props:Props) {
   const tokenCount=(trace?.usage as {total_tokens?:number}|undefined)?.total_tokens;
   return <section className={`muse-panel ${expanded?'is-expanded':'is-collapsed'}`} aria-label="Muse coordinator">
     <div className="muse-summary">
-      <div><span className="w-eyebrow">OPTIONAL MODEL COORDINATION</span><h2>Muse coordinator</h2><p>{expanded?'Inspect the same fleet through received telemetry, a model decision and local execution.':'Local recovery runs the fleet. Open Muse to evaluate a snapshot and inspect its decision.'}</p></div>
+      <div><span className="w-eyebrow">FLEET REASONING & COORDINATION</span><h2>Muse coordinator</h2><p>{expanded?'Inspect the same fleet through received telemetry, a model decision and local execution.':'Fleet strategy through Muse reasoning. Open the inspector to see its inputs and decisions.'}</p></div>
       <div className="muse-summary-actions"><span className="muse-badge">{busy?'REASONING…':policy?`ACTIVE: ${policy.strategy.toUpperCase()}`:auto?'AUTO-ESCALATION ON':execute?'EXECUTION ENABLED':'LOCAL CONTROL'}</span><button aria-expanded={expanded} onClick={()=>setExpanded(!expanded)}>{expanded?'Hide Muse':'Open Muse'}</button>{!expanded&&(auto||execute||policy)&&<button onClick={baseline}>Return to baseline</button>}</div>
     </div>
     {expanded&&<div className="muse-body">

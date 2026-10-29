@@ -1,3 +1,4 @@
+import { SwarmPreview } from './SwarmPreview';
 import { useEffect, useRef, useState } from 'react';
 import { SiteHeader, SITE_PAGES } from './SiteHeader';
 import './home.css';
@@ -5,7 +6,7 @@ import './home.css';
 const introductions: Record<string, string> = {
   swarm: 'Watch a fleet turn sunlight into compute. Follow cloud tracking, energy use and the estimated value of a daylight day.',
   unit: 'Meet the hardware. Switch between master and worker nodes, move the camera and explore solar tracking, propulsion and component dimensions.',
-  weather: 'Test weather, low batteries and recovery on one fleet. Open the optional Muse coordinator to inspect model inputs, decisions and execution.',
+  weather: 'See how Muse reasons about weather, battery failures and recovery. Inspect its inputs, decisions and the fleet’s response.',
 };
 const nodes = [[110,112],[150,88],[190,112],[230,88],[270,112],[130,155],[170,155],[210,155],[250,155],[150,195],[190,195],[230,195]];
 function Node({ x, y, scale = 1 }: { x: number; y: number; scale?: number }) {
@@ -40,7 +41,7 @@ export function HomePage() {
     <div className="home-intro"><span className="home-eyebrow">SOLAR POWER · OCEAN COMPUTE · ADAPTIVE COORDINATION</span><h1>Compute that follows<br />the sun<span>.</span></h1><p>Marine Compute Swarm explores floating, solar-powered computers that work together at sea. Start with the fleet, inspect a node, then test how it responds.</p></div>
     <div className="home-guide" aria-live="polite"><span>{active ? SITE_PAGES.find(p => p.id === active)?.name : 'Choose your starting point'}</span><p>{active ? introductions[active] : 'Three connected views of one concept. Hover or focus a preview to learn more, then open it to explore.'}</p></div>
     <div className="preview-grid">{[SITE_PAGES[0], SITE_PAGES[2], SITE_PAGES[1]].map((page,i) => <a className="preview-card" key={page.id} href={page.href} onMouseEnter={() => setActive(page.id)} onMouseLeave={() => setActive(null)} onFocus={() => setActive(page.id)} onBlur={() => setActive(null)}>
-      <div className="preview-screen">{page.id==='unit'?<UnitPreview />:<Preview kind={page.id} />}<span className="preview-open">Open view ↗</span></div><div className="preview-caption"><span className="preview-number">0{i+1}</span><div><h2>{page.name}</h2><p>{page.description}</p></div><span aria-hidden="true">↗</span></div><p className="preview-mobile-description">{introductions[page.id]}</p>
+      <div className="preview-screen">{page.id==='swarm'?<SwarmPreview />:page.id==='unit'?<UnitPreview />:<Preview kind={page.id} />}<span className="preview-open">Open view ↗</span></div><div className="preview-caption"><span className="preview-number">0{i+1}</span><div><h2>{page.name}</h2><p>{page.description}</p></div><span aria-hidden="true">↗</span></div><p className="preview-mobile-description">{introductions[page.id]}</p>
     </a>)}</div>
     <footer className="home-footer">Exploratory simulation <span>Hardware, energy and recovery estimates are design assumptions. These views explain the concept and help test it.</span></footer>
   </main></div>;

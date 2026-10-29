@@ -13,3 +13,11 @@ test('home explains the project and offers the three integrated module destinati
   fireEvent.focus(destinations[2]);
   expect(screen.getByText(/Meet the hardware/, {selector:'.home-guide p'})).toBeInTheDocument();
 });
+
+
+test('Swarm uses an isolated live preview instead of illustrative markers',()=>{
+  render(<HomePage />);
+  const preview=screen.getByTitle('Live isometric Swarm preview at 10× speed');
+  expect(preview).toHaveAttribute('src','/?view=swarm&preview=swarm');
+  expect(preview).toHaveAttribute('tabindex','-1');
+});

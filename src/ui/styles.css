@@ -31,13 +31,12 @@ h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: 
 
 /* Shared project navigation stays above each page's own controls and 3D viewport. */
 :root { --site-header-height: 56px; }
-.site-header { position:fixed; inset:0 0 auto; height:var(--site-header-height); z-index:1000; display:flex; align-items:center; gap:20px; padding:0 22px; background:rgba(5,11,24,.97); border-bottom:1px solid var(--line); color:var(--ink); }
-.site-brand { display:flex; align-items:center; gap:9px; color:var(--ink); text-decoration:none; white-space:nowrap; }
+.site-header { position:fixed; inset:0 0 auto; height:var(--site-header-height); z-index:1000; display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:center; gap:16px; padding:0 22px; background:rgba(5,11,24,.97); border-bottom:1px solid var(--line); color:var(--ink); }
+.site-brand { justify-self:start; display:flex; align-items:center; gap:9px; color:var(--ink); text-decoration:none; white-space:nowrap; }
 .site-brand>span { font-size:28px; line-height:1; color:var(--accent); }
 .site-brand strong { font-size:13px; font-weight:650; letter-spacing:.035em; }
-.site-divider { height:20px; border-left:1px solid var(--line); }
-.site-page-title { font-size:13px; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.site-menu-toggle { margin-left:auto; display:flex; align-items:center; justify-content:center; gap:8px; padding:7px 11px; flex-shrink:0; font-size:12px; }
+.site-page-title { text-align:center; font-size:13px; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.site-menu-toggle { justify-self:end; margin-left:0; display:flex; align-items:center; justify-content:center; gap:8px; padding:7px 11px; flex-shrink:0; font-size:12px; }
 .site-menu-toggle[aria-expanded=true] { color:var(--accent); border-color:var(--accent); }
 .site-navigation { position:absolute; top:calc(100% + 8px); right:16px; width:min(340px,calc(100vw - 24px)); max-height:calc(100dvh - 76px); overflow:auto; padding:8px; border:1px solid var(--line); border-radius:12px; background:#091224; box-shadow:0 18px 60px #0008; }
 .site-menu-label { color:var(--dim); padding:9px 10px 12px; font-size:10px; text-transform:uppercase; letter-spacing:.09em; }
@@ -119,3 +118,5 @@ button[aria-pressed=true] { border-color:var(--accent); color:var(--accent); }
   .module-controls.is-open { padding:14px; margin:0; min-height:0; align-items:flex-end; }
   .toolbar-clock { justify-content:center; }
 }
+
+@media(max-width:800px) { .site-brand strong { display:none; } }

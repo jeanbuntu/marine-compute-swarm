@@ -106,7 +106,7 @@ export function WeatherApp({ reasoning = false }: { reasoning?: boolean }) {
       <button onClick={()=>{setReasoningEpoch(v=>v+1);setState(createWeather(designs));select('W01');}}>Reset fleet</button>
     </SimulationToolbar>
     <main>
-      <div className="w-heading"><div><div className="w-eyebrow">OCEAN RESILIENCE / FAILURE REHEARSAL</div><h1>Weather Simulator<span>.</span></h1><p>Test the fleet, inject failures and optionally ask Muse to coordinate a response.</p></div><button onClick={() => setShowPlan(!showPlan)} aria-expanded={showPlan}>Recovery & design rationale ↗</button></div>
+      <div className="w-heading"><div><div className="w-eyebrow">OCEAN RESILIENCE / FAILURE REHEARSAL</div><h1>Weather Simulator<span>.</span></h1><p>Test the fleet, inject failures and inspect Muse’s reasoning and response.</p></div><button onClick={() => setShowPlan(!showPlan)} aria-expanded={showPlan}>Recovery & design rationale ↗</button></div>
       <ReasoningPanel expanded={museOpen} onExpandedChange={setMuseOpen} onActivityChange={setMuseActive} epoch={reasoningEpoch} state={state} conditions={conditions} scenario={scenario} designs={designs} onClear={()=>setState(s=>({...s,reasoningPolicy:undefined}))} onApply={(decision:Decision,input:Observation)=>{
         const current=observe(state,conditions,scenario,designs,useStore.getState().config);
         const rejected=validateDecision(decision,current);

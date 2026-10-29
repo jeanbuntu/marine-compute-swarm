@@ -42,7 +42,7 @@ const initial = () => ({
   config: defaultConfig(),
   designs: { worker: workerDesign(), master: masterDesign() },
   selectedNodeId: null, hoveredId: null, explodedNodeId: null, selectedPartId: null,
-  inspectionDimensions: false, inspectionExploded: true, drawerOpen: false, playing: true, speed: 120, timeS: 9 * 3600, lastOutcome: null,
+  inspectionDimensions: false, inspectionExploded: true, drawerOpen: false, playing: true, speed: 10, timeS: 9 * 3600, lastOutcome: null,
 });
 
 export const useStore = create<State>((set, get) => ({

@@ -3,6 +3,7 @@ import { SiteHeader } from './ui/SiteHeader';
 import { lazy, Suspense } from 'react';
 const WeatherApp = lazy(() => import('./ui/weather/WeatherApp').then(m=>({default:m.WeatherApp})));
 const MasterApp = lazy(() => import('./ui/master/MasterApp').then(m=>({default:m.MasterApp})));
+const SwarmPreviewPage = lazy(() => import('./scene/SwarmPreviewPage').then(m=>({default:m.SwarmPreviewPage})));
 const SwarmScene = lazy(() => import('./scene/SwarmScene').then(m=>({default:m.SwarmScene})));
 const Loading = () => <p className="loading-view" role="status">Loading simulation…</p>;
 import { readView } from './scene/urlState';
@@ -16,6 +17,7 @@ import { NodeCameraPanel } from './ui/NodeCameraPanel';
 import './ui/styles.css';
 
 export function App() {
+  if(typeof window!=='undefined'&&new URLSearchParams(window.location.search).get('preview')==='swarm')return <Suspense fallback={<Loading />}><SwarmPreviewPage /></Suspense>;
   if (typeof window !== 'undefined' && readView(window.location.search) === 'home') return <HomePage />;
   if (typeof window !== 'undefined' && readView(window.location.search) === 'reasoning') return <Suspense fallback={<Loading />}><WeatherApp reasoning /></Suspense>;
   if (typeof window !== 'undefined' && readView(window.location.search) === 'weather') return <Suspense fallback={<Loading />}><WeatherApp /></Suspense>;
