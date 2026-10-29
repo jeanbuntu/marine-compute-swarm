@@ -23,6 +23,7 @@ test('a delayed response cannot execute after fleet conditions change',async()=>
   await waitFor(()=>expect(f).toHaveBeenCalled());
   fireEvent.change(screen.getByRole('combobox'),{target:{value:'Muse'}});
   fireEvent.change(screen.getByLabelText('Dashboard access token'),{target:{value:'dashboard-token'}});
+  fireEvent.click(screen.getByText(/Automation & execution/, {selector:'summary'}));
   fireEvent.click(screen.getByLabelText('Execute validated strategies'));
   await waitFor(()=>expect(screen.getByRole('button',{name:'Evaluate snapshot'})).not.toBeDisabled());
   fireEvent.click(screen.getByRole('button',{name:'Evaluate snapshot'}));
@@ -37,6 +38,7 @@ test('returning to baseline cancels execution of an outstanding response',async(
   const apply=vi.fn(),clear=vi.fn();render(<ReasoningPanel state={state} conditions={conditions} scenario="day" designs={designs} onApply={apply} onClear={clear} />);
   fireEvent.change(screen.getByRole('combobox'),{target:{value:'Muse'}});
   fireEvent.change(screen.getByLabelText('Dashboard access token'),{target:{value:'dashboard-token'}});
+  fireEvent.click(screen.getByText(/Automation & execution/, {selector:'summary'}));
   fireEvent.click(screen.getByLabelText('Execute validated strategies'));
   await waitFor(()=>expect(screen.getByRole('button',{name:'Evaluate snapshot'})).not.toBeDisabled());
   fireEvent.click(screen.getByRole('button',{name:'Evaluate snapshot'}));

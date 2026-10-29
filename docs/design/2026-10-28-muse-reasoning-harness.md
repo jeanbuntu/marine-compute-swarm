@@ -1,5 +1,7 @@
 # Muse fleet reasoning harness
 
+UI update: Muse now lives inside Weather Simulator as an optional coordinator inspector. Inputs, decisions, exact prompts, raw replies and history expand independently. The old reasoning URL opens this shared simulator with the inspector expanded.
+
 The reasoning dashboard (`?view=reasoning`) rehearses replacing a shore-based copilot with a coordinator on each master. It uses the same Weather Simulator state, failures, hardware and local recovery controller. No vessel or live weather service is connected.
 
 ## Control loop

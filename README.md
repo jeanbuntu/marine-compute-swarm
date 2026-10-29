@@ -21,7 +21,7 @@ Optional starting view from the address bar: `?cam=x,y,z&target=x,y,z&explode=n0
 
 ## What you see
 
-- **Explore:** the home page introduces four connected views through clickable visual previews: Swarm, Unit Bench, Muse Reasoning and Weather Simulator. Hover or focus a preview for context; on mobile, descriptions stay visible.
+- **Explore:** the home page introduces three connected views through clickable visual previews: Swarm, Unit Bench and Weather Simulator with optional Muse coordination. Hover or focus a preview for context; on mobile, descriptions stay visible.
 - **Swarm (`?view=swarm`):** the swarm on a 3D ocean under a 3D cloud layer, with the value up front: energy harvested, compute delivered, revenue and carbon avoided for a daylight day, each compared with a swarm that only holds station. Scale buttons show the same numbers at 100, 1,000 and 10,000 nodes. The detailed controls live behind the **Controls** button.
 - **Move around:** drag to orbit, Shift + left-drag (or right-drag) to pan, and scroll to zoom from the whole swarm down to one node, and dive below the surface (to 15 m) to see hulls, keels and thrusters from underneath.
 - **Playback:** 1×, 2× and 5× allow slow inspection alongside the faster simulation speeds.
@@ -108,7 +108,7 @@ When conditions permit, up to three healthy connected workers (35% minimum charg
 
 ### Site navigation
 
-The [home page](https://marine-compute-swarm.vercel.app/) introduces the project through four visual previews. Menu contains Swarm, Unit Bench, Muse Reasoning and Weather Simulator. Switch master/worker inside Unit Bench; open recovery close-ups inside Weather Simulator. Branding returns to home. Each simulator shares a fixed playback bar with speed, simulation time and browser display FPS. On mobile, module tools open under View options. Daily impact and analysis panels can be minimized or closed. The earlier `solar-swarm.vercel.app` address remains a compatibility redirect.
+The [home page](https://marine-compute-swarm.vercel.app/) introduces the project through three visual previews. Menu contains Swarm, Unit Bench and Weather Simulator. Muse coordination lives inside Weather Simulator. Switch master/worker inside Unit Bench; open recovery close-ups inside Weather Simulator. Branding returns to home. Each simulator shares a fixed playback bar with speed, simulation time and browser display FPS. On mobile, module tools open under View options. Daily impact and analysis panels can be minimized or closed. The earlier `solar-swarm.vercel.app` address remains a compatibility redirect.
 
 
 ### Autonomous recovery on the fleet map
@@ -119,9 +119,11 @@ At 8%, the survivor idles nonessential loads while three healthy neighbors form 
 
 The 2D map always fits every node automatically. Its world-aligned grid and scale bar show changes in zoom and pan; manual Fit fleet and extent controls are removed.
 
-### Muse reasoning dashboard
+### Muse coordinator inside Weather Simulator
 
-Open `?view=reasoning` or Menu → Muse Reasoning to inspect the fleet observation → escalation → Muse → validation → local execution pipeline. Inject failures using the same weather rehearsal controls below it. Local demo mode requires no credentials; shadow mode is the default. Enable automatic escalation and strategy execution separately to test the coordinator in the simulation.
+Open Weather Simulator and choose **Open Muse**. The same fleet, failures and recovery controls remain in use. Muse starts minimized; its **Inputs & prompt** and **Decision & output** sections expand separately. Readable received-node telemetry precedes the nested exact prompt, while decisions show rationale, evidence and validation/execution status with raw replies and token usage hidden separately. Decision history retains paired input/output snapshots.
+
+Local demo mode requires no credentials; shadow mode is the default. Automation and execution are separate opt-ins under **Automation & execution**. Closing the inspector preserves the session, with active automation visibly labeled and a Return to baseline action available. Playback stays at 1× while Muse is open or active. Old `?view=reasoning` links open this integrated view, as does `?view=weather&muse=open`.
 
 For live Meta calls, copy `.env.example` to `.env.local`, set `MODEL_API_KEY` and a private `MUSE_ACCESS_TOKEN`, then restart `npm run dev`. Select Meta Muse Wonder and enter only the dashboard access token in the page. `MUSE_MODEL` defaults to `muse-wonder-1.0`. Set the same environment variables in Vercel for deployed use. Never use a `VITE_` variable for secrets. See [harness design and limits](docs/design/2026-10-28-muse-reasoning-harness.md) for the action catalog, budgets, trace export and validation boundaries.
 

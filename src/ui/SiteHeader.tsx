@@ -3,8 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 export const SITE_PAGES = [
   { id: 'swarm', name: 'Swarm', href: '/?view=swarm', description: 'Follow sunlight, energy & fleet compute' },
   { id: 'unit', name: 'Unit Bench', href: '/?view=unit', description: 'Inspect master and worker hardware' },
-  { id: 'reasoning', name: 'Muse Reasoning', href: '/?view=reasoning', description: 'Observe and test fleet decisions' },
-  { id: 'weather', name: 'Weather Simulator', href: '/?view=weather', description: 'Rehearse weather, failures & recovery' },
+  { id: 'weather', name: 'Weather Simulator', href: '/?view=weather', description: 'Weather, recovery & optional Muse coordination' },
 ] as const;
 export type SitePage = typeof SITE_PAGES[number]['id'] | 'home';
 

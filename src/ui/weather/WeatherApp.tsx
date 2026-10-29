@@ -28,6 +28,8 @@ const controls: { key: keyof Conditions; label: string; unit: string; min: numbe
 ];
 
 export function WeatherApp({ reasoning = false }: { reasoning?: boolean }) {
+  const [museOpen,setMuseOpen]=useState(reasoning || new URLSearchParams(window.location.search).get('muse')==='open');
+  const [museActive,setMuseActive]=useState(museOpen);
   const designs = useStore(s => s.designs);
   const [reasoningEpoch,setReasoningEpoch]=useState(0);
   const [scenario, setScenario] = useState<ScenarioId>('day');
@@ -36,7 +38,7 @@ export function WeatherApp({ reasoning = false }: { reasoning?: boolean }) {
   const [state, setState] = useState<WeatherState>(() => createWeather(designs));
   const [selected, select] = useState(() => new URLSearchParams(window.location.search).get('inspect') === 'master' ? 'M' : 'W01');
   const [playing, play] = useState(() => !['master','worker'].includes(new URLSearchParams(window.location.search).get('inspect') ?? ''));
-  const [speed, setSpeed] = useState(reasoning ? 1 : 10);
+  const [speed, setSpeed] = useState(10);
   const [showControls, setShowControls] = useState(false);
   const [showPlan, setShowPlan] = useState(false);
   const [detailOpen, setDetailOpen] = useState(() => ['master','worker'].includes(new URLSearchParams(window.location.search).get('inspect') ?? ''));
@@ -51,9 +53,9 @@ export function WeatherApp({ reasoning = false }: { reasoning?: boolean }) {
   },[detailOpen]);
   useEffect(() => {
     if (!playing) return;
-    const id = window.setInterval(() => setState(s => stepWeather(s, conditions, scenario, (reasoning ? 1 : speed) / 10, designs)), 100);
+    const id = window.setInterval(() => setState(s => stepWeather(s, conditions, scenario, (museActive ? 1 : speed) / 10, designs)), 100);
     return () => window.clearInterval(id);
-  }, [playing, speed, conditions, scenario, designs, reasoning]);
+  }, [playing, speed, conditions, scenario, designs, museActive]);
   const env = environment(conditions, state.t), net = network(state, env.range);
   const node = state.nodes.find(n => n.id === selected)!;
   const master = state.nodes[0];
@@ -95,23 +97,24 @@ export function WeatherApp({ reasoning = false }: { reasoning?: boolean }) {
   };
   const netPower = node.pvW - node.loadW;
   return <div className={`weather-app weather-${scenario}`}>
-    <SiteHeader page={reasoning ? 'reasoning' : 'weather'} />
-    <SimulationToolbar speeds={reasoning ? [1] : undefined} playing={playing} speed={reasoning ? 1 : speed} time={`Day ${sun.day} · ${time(sun.hour*3600)}`} onPlaying={play} onSpeed={value=>setSpeed(reasoning ? 1 : value)}>
+    <SiteHeader page="weather" />
+    <SimulationToolbar speeds={museActive ? [1] : undefined} playing={playing} speed={museActive ? 1 : speed} time={`Day ${sun.day} · ${time(sun.hour*3600)}`} onPlaying={play} onSpeed={value=>setSpeed(museActive ? 1 : value)}>
       <label className="toolbar-field">Conditions<select aria-label="Conditions" value={scenario} onChange={e=>changeScenario(e.target.value as ScenarioId)}>{SCENARIOS.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
       <label className="toolbar-field">Selection<select aria-label="Selected node" value={selected} onChange={e=>select(e.target.value)}>{state.nodes.map(n=><option key={n.id}>{n.id}</option>)}</select></label>
       <button aria-expanded={showControls} onClick={()=>setShowControls(!showControls)}>Adjust conditions</button>
+      <button aria-expanded={museOpen} onClick={()=>setMuseOpen(!museOpen)}>Muse coordinator</button>
       <button onClick={()=>{setReasoningEpoch(v=>v+1);setState(createWeather(designs));select('W01');}}>Reset fleet</button>
     </SimulationToolbar>
     <main>
-      <div className="w-heading"><div><div className="w-eyebrow">OCEAN RESILIENCE / FAILURE REHEARSAL</div><h1>{reasoning ? 'Muse Reasoning' : 'Weather Simulator'}<span>.</span></h1><p>{reasoning ? 'Observe, reason, validate, act. Debug playback stays at 1× so replies can arrive before strategies expire.' : 'Push the conditions. Break the formation. Work out what comes next.'}</p></div><button onClick={() => setShowPlan(!showPlan)} aria-expanded={showPlan}>Recovery & design rationale ↗</button></div>
-      {reasoning && <ReasoningPanel selectedNode={selected} onInject={inject} epoch={reasoningEpoch} state={state} conditions={conditions} scenario={scenario} designs={designs} onClear={()=>setState(s=>({...s,reasoningPolicy:undefined}))} onApply={(decision:Decision,input:Observation)=>{
+      <div className="w-heading"><div><div className="w-eyebrow">OCEAN RESILIENCE / FAILURE REHEARSAL</div><h1>Weather Simulator<span>.</span></h1><p>Test the fleet, inject failures and optionally ask Muse to coordinate a response.</p></div><button onClick={() => setShowPlan(!showPlan)} aria-expanded={showPlan}>Recovery & design rationale ↗</button></div>
+      <ReasoningPanel expanded={museOpen} onExpandedChange={setMuseOpen} onActivityChange={setMuseActive} epoch={reasoningEpoch} state={state} conditions={conditions} scenario={scenario} designs={designs} onClear={()=>setState(s=>({...s,reasoningPolicy:undefined}))} onApply={(decision:Decision,input:Observation)=>{
         const current=observe(state,conditions,scenario,designs,useStore.getState().config);
         const rejected=validateDecision(decision,current);
         if(rejected)return rejected;
         if(signature(current)!==signature(input)||current.t-input.t>120||current.t<input.t)return 'Rejected stale snapshot; local policy retained.';
         setState(s=>logEvent({...s,reasoningPolicy:{strategy:decision.strategy,searchRadiusM:decision.searchRadiusM,expiresAt:s.t+Math.min(120,decision.nextCheckS)}},`Muse strategy: ${decision.strategy} — ${decision.summary}`));
         return `Executed ${decision.strategy}: bounded strategy sent to local controller. Dispatch remains subject to live feasibility checks.`;
-      }} />}
+      }} />
       {showControls&&detailOpen&&<div className="recovery-conditions"><h2>Conditions</h2>{controls.map(c=><label key={c.key}>{c.label} · {conditions[c.key]} {c.unit}<input aria-label={c.label} type="range" min={c.min} max={c.max} step={c.step} value={conditions[c.key]} onChange={e=>setConditions(v=>({...v,[c.key]:Number(e.target.value)}))}/></label>)}</div>}
       <section id="weather-scenario" aria-label="Fleet rehearsal">
         <div className="w-scenario"><div><span className="w-eyebrow">{preset.subtitle}</span><h2>{preset.question}</h2></div></div>

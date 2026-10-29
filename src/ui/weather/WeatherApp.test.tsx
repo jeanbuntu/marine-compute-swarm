@@ -42,3 +42,31 @@ test('reasoning locks playback to 1× while weather retains accelerated speeds',
   expect(screen.getByLabelText('Speed')).toHaveValue('10');
   expect(within(screen.getByLabelText('Speed')).getAllByRole('option').length).toBeGreaterThan(1);
 });
+
+
+test('Muse shares the fleet, hides prompt and output by default, and preserves traces when minimized', async () => {
+  render(<WeatherApp />);
+  fireEvent.click(screen.getByRole('button',{name:'Pause'}));
+  fireEvent.click(screen.getByRole('button',{name:/Drain battery to 8%/}));
+  expect(screen.getByText('Power reserve')).toBeInTheDocument();
+  expect(screen.queryByRole('button',{name:'Evaluate snapshot'})).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:'Open Muse'}));
+  expect(screen.getByLabelText('Speed')).toHaveValue('1');
+  expect(screen.getByText('Inputs & prompt').closest('details')).not.toHaveAttribute('open');
+  expect(screen.getByText('Decision & output').closest('details')).not.toHaveAttribute('open');
+  fireEvent.click(screen.getByRole('button',{name:'Evaluate snapshot'}));
+  await screen.findByText(/Validated; shadow mode/);
+  expect(screen.getByText('Inputs & prompt').closest('summary')).toHaveTextContent('1 adverse signals');
+  fireEvent.click(screen.getByRole('button',{name:'Hide Muse'}));
+  expect(screen.getByText('Power reserve')).toBeInTheDocument();
+  expect(screen.queryByText('Inputs & prompt')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:'Open Muse'}));
+  expect(screen.getByText('Decision & output').closest('summary')).toHaveTextContent('conserve');
+  fireEvent.click(screen.getByText(/Automation & execution/, {selector:'summary'}));
+  fireEvent.click(screen.getByLabelText('Execute validated strategies'));
+  fireEvent.click(screen.getByRole('button',{name:'Hide Muse'}));
+  expect(screen.getByText('EXECUTION ENABLED')).toBeInTheDocument();
+  expect(screen.getByLabelText('Speed')).toHaveValue('1');
+  fireEvent.click(screen.getByRole('button',{name:'Return to baseline'}));
+  expect(screen.getByLabelText('Speed')).toHaveValue('10');
+});

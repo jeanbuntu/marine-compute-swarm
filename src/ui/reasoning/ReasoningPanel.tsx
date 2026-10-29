@@ -6,11 +6,13 @@ import { useStore } from '../../state/store';
 import './reasoning.css';
 
 type Trace={id:number;at:number;source:'demo'|'Muse';observation:Observation;prompt:ReturnType<typeof messages>;status:string;raw?:string;decision?:Decision;latencyMs?:number;usage?:unknown;outcome?:string};
-type Props={selectedNode?:string;onInject?:(type:'battery'|'flip'|'ingress'|'range')=>void;epoch?:number;state:WeatherState;conditions:Conditions;scenario:ScenarioId;designs:Designs;onApply:(decision:Decision,observation:Observation)=>string;onClear:()=>void};
+type Props={expanded?:boolean;onExpandedChange?:(open:boolean)=>void;onActivityChange?:(active:boolean)=>void;epoch?:number;state:WeatherState;conditions:Conditions;scenario:ScenarioId;designs:Designs;onApply:(decision:Decision,observation:Observation)=>string;onClear:()=>void};
 export function ReasoningPanel(props:Props) {
   const config=useStore(s=>s.config);
   const observation=observe(props.state,props.conditions,props.scenario,props.designs,config);
-  const [expanded,setExpanded]=useState(true);
+  const [localExpanded,setLocalExpanded]=useState(true);
+  const expanded=props.expanded??localExpanded;
+  const setExpanded=(open:boolean)=>{setLocalExpanded(open);props.onExpandedChange?.(open);};
   const [connection,setConnection]=useState({configured:false,model:'muse-wonder-1.0',endpoint:'https://api.meta.ai/v1/chat/completions'});
   const [token,setToken]=useState(''),[mode,setMode]=useState<'demo'|'Muse'>('demo'),[auto,setAuto]=useState(false),[execute,setExecute]=useState(false);
   const [traces,setTraces]=useState<Trace[]>([]),[selected,setSelected]=useState<number|null>(null),[busy,setBusy]=useState(false),[calls,setCalls]=useState(0);
@@ -54,23 +56,46 @@ export function ReasoningPanel(props:Props) {
   useEffect(()=>{if(!auto)return;const timer=window.setInterval(()=>void runRef.current(false),1000);return()=>clearInterval(timer);},[auto]);
   const trace=traces.find(t=>t.id===selected)??traces[0];
   function download(){const a=document.createElement('a');const url=URL.createObjectURL(new Blob([JSON.stringify(traces,null,2)],{type:'application/json'}));a.href=url;a.download='muse-reasoning-traces.json';a.click();URL.revokeObjectURL(url);}
-  return <section className="muse-panel" aria-label="Muse reasoning pipeline">
-    <div className="muse-title"><div><span className="w-eyebrow">MASTER NODE / ADAPTIVE COORDINATION</span><h2>Decision pipeline</h2><p>Routine control stays local. Escalate uncertainty, inspect a decision, measure its effect.</p></div><span className="muse-badge">{mode==='demo'?'DETERMINISTIC DEMO':connection.configured?'MUSE KEY CONFIGURED':'MUSE NOT CONFIGURED'}</span></div>
-    <button className="muse-collapse" aria-expanded={expanded} onClick={()=>setExpanded(!expanded)}>{expanded?"Minimize reasoning":"Expand reasoning"}</button>
-    {!expanded&&<p className="muse-footnote">Current strategy: {props.state.reasoningPolicy&&props.state.reasoningPolicy.expiresAt>props.state.t?props.state.reasoningPolicy.strategy:"baseline"} · {auto?"Automatic escalation on":"Manual evaluation"} · {execute?"Execution enabled":"Shadow mode"}</p>}
-    {expanded&&<>
-    <div className="muse-flow" aria-label="Decision flow">{['01 · Observe','02 · Escalation gate','03 · Muse API','04 · Validate','05 · Local controller','06 · Feedback'].map((label,i)=><div key={label}><b>{label}</b><small>{[`${observation.nodes.length} nodes · received fixes`,observation.adverse.length?`${observation.adverse.length} adverse signals`:'Routine → no automatic API call',busy?'Awaiting response':mode==='demo'?'No API calls':connection.model,'Schema + freshness + dispatch limits',props.state.reasoningPolicy&&props.state.reasoningPolicy.expiresAt>props.state.t?`${props.state.reasoningPolicy.strategy} until ${props.state.reasoningPolicy.expiresAt.toFixed(0)} s`:'Baseline recovery policy',`${props.state.rescue?.status??'Formation'} · ${props.state.t.toFixed(0)} s`][i]}</small></div>)}</div>
-    {props.onInject&&<div className="muse-inject"><span>Inject on {props.selectedNode}</span><button onClick={()=>props.onInject?.('battery')}>Low battery · 8%</button><button onClick={()=>props.onInject?.('flip')}>Capsize</button><button onClick={()=>props.onInject?.('ingress')}>Water ingress</button><button onClick={()=>props.onInject?.('range')}>Lost beyond relays</button><small>Select another node or change weather in the fleet rehearsal below.</small></div>}
-    <div className="muse-toolbar"><label>Provider <select value={mode} onChange={e=>{generation.current++;request.current?.abort();setMode(e.target.value as 'demo'|'Muse');setAuto(false);}}><option value="demo">Local demo · no API</option><option value="Muse">Meta Muse Wonder</option></select></label><label><input type="checkbox" checked={auto} onChange={e=>setAuto(e.target.checked)} />Auto-escalate adverse events</label><label><input type="checkbox" checked={execute} onChange={e=>{generation.current++;request.current?.abort();setExecute(e.target.checked);if(!e.target.checked)props.onClear();}} />Execute validated strategies</label><button disabled={busy||(mode==='Muse'&&(!connection.configured||!token||calls>=20))} onClick={()=>void run()}>{busy?'Reasoning…':'Evaluate snapshot'}</button><button onClick={()=>{generation.current++;request.current?.abort();setAuto(false);props.onClear();}}>Return to baseline</button><button disabled={!traces.length} onClick={download}>Export traces</button></div>
-    {mode==='Muse'&&<div className="muse-config"><label>Dashboard access token <input type="password" autoComplete="off" value={token} onChange={e=>setToken(e.target.value)} placeholder="MUSE_ACCESS_TOKEN (not the Meta key)" /></label><span>{connection.endpoint} · {connection.model} · {calls}/20 session requests</span><p>Meta key stays on the server in MODEL_API_KEY. Requests have a 45 s timeout, 10 s manual spacing, 30 s automatic cooldown and a six/minute server budget.</p></div>}
-    <div className="muse-feedback" aria-label="Live coordinator feedback"><span>Received links <b>{observation.nodes.filter(n=>n.connected).length}/{observation.nodes.length}</b></span><span>Reported PV <b>{observation.nodes.reduce((sum,n)=>sum+(n.pvW??0),0).toFixed(0)} W</b></span><span>Reported load <b>{observation.nodes.reduce((sum,n)=>sum+(n.loadW??0),0).toFixed(0)} W</b></span><span>Current policy <b>{props.state.reasoningPolicy&&props.state.reasoningPolicy.expiresAt>props.state.t?props.state.reasoningPolicy.strategy:'baseline'}</b></span></div>
-    <div className="muse-debug"><aside><div className="w-eyebrow">DECISION HISTORY</div>{!traces.length&&<p>Inject a failure below, then evaluate. Shadow mode is the default.</p>}{traces.map(t=><button className={t.id===trace?.id?'active':''} key={t.id} onClick={()=>setSelected(t.id)}><b>{t.at.toFixed(0)} s · {t.source} · {t.status}</b><small>{t.decision?.strategy??t.outcome??'Awaiting provider'}{t.latencyMs!==undefined?` · ${t.latencyMs} ms`:''}</small></button>)}</aside><article>
-      <div role="status">{trace?.outcome??'Ready. No model request has been sent.'}</div>
-      {trace?.decision&&<div className="muse-decision"><h3>{trace.decision.strategy}</h3><p>{trace.decision.summary}</p><b>Evidence</b><ul>{trace.decision.evidence.map((v,i)=><li key={i}>{v}</li>)}</ul><b>Uncertainty</b><ul>{trace.decision.uncertainty.map((v,i)=><li key={i}>{v}</li>)}</ul><p>Requested review: {trace.decision.nextCheckS} s · effective policy capped at 120 s.</p></div>}
-      <details><summary>{trace?'Exact request sent':'Next input snapshot & prompt'}</summary><pre>{JSON.stringify(trace?.prompt??messages(observation),null,2)}</pre></details>
-      <details><summary>Raw response & token usage</summary><pre>{trace?.raw??'No response yet.'}</pre><pre>{JSON.stringify(trace?.usage??null,null,2)}</pre></details>
-    </article></div>
-    </>}
-    <p className="muse-footnote">Decision rationale is model-provided explanation, not internal chain of thought. Inputs use received reports, not lost-node truth coordinates. Cloud counts come from a separate seeded tracker using Swarm settings; Weather PV remains its daylight/rain model. No live forecast, satellite service or vessel control is connected.</p>
+  const policy=props.state.reasoningPolicy&&props.state.reasoningPolicy.expiresAt>props.state.t?props.state.reasoningPolicy:undefined;
+  const active=expanded||auto||execute||busy||!!policy;
+  useEffect(()=>{props.onActivityChange?.(active);},[active,props.onActivityChange]);
+  const input=trace?.observation??observation;
+  function baseline(){generation.current++;request.current?.abort();setAuto(false);setExecute(false);props.onClear();}
+  const tokenCount=(trace?.usage as {total_tokens?:number}|undefined)?.total_tokens;
+  return <section className={`muse-panel ${expanded?'is-expanded':'is-collapsed'}`} aria-label="Muse coordinator">
+    <div className="muse-summary">
+      <div><span className="w-eyebrow">OPTIONAL MODEL COORDINATION</span><h2>Muse coordinator</h2><p>{expanded?'Inspect the same fleet through received telemetry, a model decision and local execution.':'Local recovery runs the fleet. Open Muse to evaluate a snapshot and inspect its decision.'}</p></div>
+      <div className="muse-summary-actions"><span className="muse-badge">{busy?'REASONING…':policy?`ACTIVE: ${policy.strategy.toUpperCase()}`:auto?'AUTO-ESCALATION ON':execute?'EXECUTION ENABLED':'LOCAL CONTROL'}</span><button aria-expanded={expanded} onClick={()=>setExpanded(!expanded)}>{expanded?'Hide Muse':'Open Muse'}</button>{!expanded&&(auto||execute||policy)&&<button onClick={baseline}>Return to baseline</button>}</div>
+    </div>
+    {expanded&&<div className="muse-body">
+      <div className="muse-toolbar">
+        <label className="muse-provider">Provider<select aria-label="Provider" value={mode} onChange={e=>{generation.current++;request.current?.abort();setMode(e.target.value as 'demo'|'Muse');setAuto(false);}}><option value="demo">Local demo · no API</option><option value="Muse">Meta Muse Wonder</option></select></label>
+        <button disabled={busy||(mode==='Muse'&&(!connection.configured||!token||calls>=20))} onClick={()=>void run()}>{busy?'Reasoning…':'Evaluate snapshot'}</button>
+        <button onClick={baseline}>Return to baseline</button>
+        <span className="muse-debug-speed">1× while Muse is open or active · inject failures in the fleet below</span>
+      </div>
+      {mode==='Muse'&&<div className="muse-config"><label>Dashboard access token<input type="password" autoComplete="off" value={token} onChange={e=>setToken(e.target.value)} placeholder="MUSE_ACCESS_TOKEN (not the Meta key)" /></label><span>{connection.configured?connection.model:'Server credentials not configured'} · {calls}/20 live requests</span><details><summary>Connection details</summary><p>{connection.endpoint}. Meta credentials stay on the server. 45 s timeout, 10 s manual spacing, 30 s automatic cooldown and six requests/minute per server process.</p></details></div>}
+      <div className="muse-outcome" role="status" aria-live="polite">{busy?'Evaluating the captured fleet snapshot…':trace?.outcome??'No model request yet. Choose a provider, inject a failure, then evaluate.'}</div>
+      <div className="muse-inspectors">
+        <details className="muse-inspector"><summary><b>Inputs & prompt</b><span>{input.nodes.filter(n=>n.connected).length}/{input.nodes.length} received links · {input.adverse.length} adverse signals{trace?` · snapshot ${trace.at.toFixed(0)} s`:''}</span></summary>
+          <p>{trace?'The captured input for the selected decision.':'The next input follows the fleet until you evaluate.'} Disconnected nodes contribute received reports, not their truth positions.</p>
+          <div className="muse-input-facts"><span>Conditions<b>{input.conditions.wind} m/s wind · {input.conditions.swell} m swell</b></span><span>Daylight<b>{input.sun.ghi.toFixed(0)} W/m² · {input.sun.hour.toFixed(1)} h</b></span><span>Local recovery<b>{input.baseline.status}</b></span></div>
+          <p><b>Escalation signals:</b> {input.adverse.join(', ')||'Routine conditions'}</p>
+          <div className="muse-report-table"><table><caption>Received node telemetry</caption><thead><tr><th>Node</th><th>Link</th><th>Charge</th><th>Reported fault</th><th>Fix age</th></tr></thead><tbody>{input.nodes.map(n=><tr key={n.id}><td>{n.id}</td><td>{n.connected?'Connected':'Lost'}</td><td>{n.batteryPct===null?'Unknown':`${n.batteryPct.toFixed(1)}%`}</td><td>{n.fault??'Unknown'}</td><td>{n.reportAgeS===null?'Unknown':`${n.reportAgeS.toFixed(0)} s`}</td></tr>)}</tbody></table></div>
+          <details><summary>{trace?'Exact request sent':'Next input snapshot & prompt'}</summary><pre>{JSON.stringify(trace?.prompt??messages(observation),null,2)}</pre></details>
+        </details>
+        <details className="muse-inspector"><summary><b>Decision & output</b><span>{trace?.decision?.strategy??trace?.status??'No decision yet'}{trace?.latencyMs!==undefined?` · ${(trace.latencyMs/1000).toFixed(1)} s`:''}</span></summary>
+          {!trace&&<p>Evaluate a snapshot to see the proposed strategy, its evidence and whether it was executed.</p>}
+          {trace&&<p><b>{trace.source==='demo'?'Local demonstration; no model called':connection.model}</b> · {trace.status}</p>}
+          {trace?.decision&&<div className="muse-decision"><h3>{trace.decision.strategy}</h3><p>{trace.decision.summary}</p><b>Evidence</b><ul>{trace.decision.evidence.map((v,i)=><li key={i}>{v}</li>)}</ul><b>Uncertainty</b><ul>{trace.decision.uncertainty.map((v,i)=><li key={i}>{v}</li>)}</ul><p>Review in {trace.decision.nextCheckS} simulated seconds; policy expires within 120 seconds.</p></div>}
+          <details><summary>Raw response & token usage{tokenCount!==undefined?` · ${tokenCount.toLocaleString()} tokens`:''}</summary><pre>{trace?.raw??'No response yet.'}</pre><pre>{JSON.stringify(trace?.usage??null,null,2)}</pre></details>
+        </details>
+      </div>
+      <div className="muse-secondary">
+        <details><summary>Automation & execution · {execute?'Execution enabled':'Shadow mode'}</summary><div className="muse-options"><label><input type="checkbox" checked={auto} onChange={e=>setAuto(e.target.checked)} />Auto-escalate adverse events</label><label><input type="checkbox" checked={execute} onChange={e=>{generation.current++;request.current?.abort();setExecute(e.target.checked);if(!e.target.checked)props.onClear();}} />Execute validated strategies</label></div><p>Shadow mode shows proposals. Execution sends a bounded strategy to this same fleet; local power, damage, wildlife and dispatch checks still apply. Hiding Muse preserves the session and any active automation.</p></details>
+        <details><summary>Decision history · {traces.length}</summary><div className="muse-history">{!traces.length&&<p>No decisions recorded in this session.</p>}{traces.map(t=><button className={t.id===trace?.id?'active':''} key={t.id} onClick={()=>setSelected(t.id)}>{t.at.toFixed(0)} s · {t.source} · {t.status} · {t.decision?.strategy??'No strategy'}</button>)}</div><button disabled={!traces.length} onClick={download}>Export traces</button></details>
+        <details><summary>Model scope & sources</summary><p>Rationale is the model’s explanatory output. Cloud telemetry comes from a separate seeded tracker; Weather PV uses its daylight/rain model. No live forecast, satellite service or vessel control is connected.</p></details>
+      </div>
+    </div>}
   </section>;
 }
