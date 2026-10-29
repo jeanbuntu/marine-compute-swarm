@@ -93,3 +93,29 @@ button[aria-pressed=true] { border-color:var(--accent); color:var(--accent); }
 .playback-controls { display:grid; grid-template-columns:84px 72px 130px 42px; gap:12px; }
 .playback-controls .toolbar-field select { width:100%; }.toolbar-clock { min-width:0; }.toolbar-fps { min-width:0; }
 @media(max-width:600px) { .playback-controls { grid-template-columns:84px 72px minmax(0,1fr) 35px; gap:10px; }.toolbar-clock { text-align:center; } }
+
+/* Reserve one label line above every control and retain space for focus outlines. */
+:root { --toolbar-height:88px; --toolbar-control-height:36px; }
+.simulation-toolbar { padding:6px 20px; align-items:stretch; }
+.playback-controls { align-items:end; padding:6px 0 14px; }
+.simulation-toolbar .toolbar-field { gap:4px; line-height:14px; }
+.simulation-toolbar .toolbar-field select,
+.simulation-toolbar button:not(.module-toggle) { height:var(--toolbar-control-height); min-height:var(--toolbar-control-height); margin-block:0; }
+.toolbar-clock,.toolbar-fps,.toolbar-help { height:var(--toolbar-control-height); display:flex; align-items:center; }
+.module-controls { align-items:flex-end; padding:6px 6px 14px 18px; }
+.module-controls>.mseg { padding:0; gap:4px; background:transparent; align-items:flex-end; }
+.module-controls>.mseg button { margin:0; }
+@media(max-width:1100px) {
+  :root { --toolbar-height:calc(2 * var(--toolbar-control-height) + 92px); }
+  .simulation-toolbar { padding:6px 16px; gap:4px; }
+  .playback-controls { height:calc(var(--toolbar-control-height) + 30px); padding:6px 0; }
+  .module-controls { min-height:calc(var(--toolbar-control-height) + 46px); padding:6px 6px 14px; margin-inline:-6px; }
+}
+@media(pointer:coarse) { :root { --toolbar-control-height:44px; } }
+@media(max-width:600px) {
+  :root { --toolbar-height:calc(var(--toolbar-control-height) + 88px); }
+  .simulation-toolbar { padding:6px 12px; }
+  .module-toggle { height:38px; min-height:38px; }
+  .module-controls.is-open { padding:14px; margin:0; min-height:0; align-items:flex-end; }
+  .toolbar-clock { justify-content:center; }
+}
