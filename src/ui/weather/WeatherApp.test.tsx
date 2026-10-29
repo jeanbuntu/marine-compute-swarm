@@ -28,3 +28,17 @@ test('failure injection, fleet reset, and design rationale are accessible', () =
   fireEvent.click(screen.getByRole('button', { name: 'Reset fleet' }));
   expect(within(screen.getByRole('log')).queryByText(/Full capsize injected/)).not.toBeInTheDocument();
 });
+
+
+test('reasoning locks playback to 1× while weather retains accelerated speeds', () => {
+  const {unmount}=render(<WeatherApp reasoning />);
+  expect(screen.getByLabelText('Speed')).toHaveValue('1');
+  expect(within(screen.getByLabelText('Speed')).getAllByRole('option')).toHaveLength(1);
+  fireEvent.change(screen.getByLabelText('Conditions'),{target:{value:'night'}});
+  fireEvent.click(screen.getByRole('button',{name:'Reset fleet'}));
+  expect(screen.getByLabelText('Speed')).toHaveValue('1');
+  unmount();
+  render(<WeatherApp />);
+  expect(screen.getByLabelText('Speed')).toHaveValue('10');
+  expect(within(screen.getByLabelText('Speed')).getAllByRole('option').length).toBeGreaterThan(1);
+});

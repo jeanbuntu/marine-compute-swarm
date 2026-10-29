@@ -36,7 +36,7 @@ export function WeatherApp({ reasoning = false }: { reasoning?: boolean }) {
   const [state, setState] = useState<WeatherState>(() => createWeather(designs));
   const [selected, select] = useState(() => new URLSearchParams(window.location.search).get('inspect') === 'master' ? 'M' : 'W01');
   const [playing, play] = useState(() => !['master','worker'].includes(new URLSearchParams(window.location.search).get('inspect') ?? ''));
-  const [speed, setSpeed] = useState(10);
+  const [speed, setSpeed] = useState(reasoning ? 1 : 10);
   const [showControls, setShowControls] = useState(false);
   const [showPlan, setShowPlan] = useState(false);
   const [detailOpen, setDetailOpen] = useState(() => ['master','worker'].includes(new URLSearchParams(window.location.search).get('inspect') ?? ''));
@@ -51,9 +51,9 @@ export function WeatherApp({ reasoning = false }: { reasoning?: boolean }) {
   },[detailOpen]);
   useEffect(() => {
     if (!playing) return;
-    const id = window.setInterval(() => setState(s => stepWeather(s, conditions, scenario, speed / 10, designs)), 100);
+    const id = window.setInterval(() => setState(s => stepWeather(s, conditions, scenario, (reasoning ? 1 : speed) / 10, designs)), 100);
     return () => window.clearInterval(id);
-  }, [playing, speed, conditions, scenario, designs]);
+  }, [playing, speed, conditions, scenario, designs, reasoning]);
   const env = environment(conditions, state.t), net = network(state, env.range);
   const node = state.nodes.find(n => n.id === selected)!;
   const master = state.nodes[0];
@@ -96,14 +96,14 @@ export function WeatherApp({ reasoning = false }: { reasoning?: boolean }) {
   const netPower = node.pvW - node.loadW;
   return <div className={`weather-app weather-${scenario}`}>
     <SiteHeader page={reasoning ? 'reasoning' : 'weather'} />
-    <SimulationToolbar playing={playing} speed={speed} time={`Day ${sun.day} · ${time(sun.hour*3600)}`} onPlaying={play} onSpeed={setSpeed}>
+    <SimulationToolbar speeds={reasoning ? [1] : undefined} playing={playing} speed={reasoning ? 1 : speed} time={`Day ${sun.day} · ${time(sun.hour*3600)}`} onPlaying={play} onSpeed={value=>setSpeed(reasoning ? 1 : value)}>
       <label className="toolbar-field">Conditions<select aria-label="Conditions" value={scenario} onChange={e=>changeScenario(e.target.value as ScenarioId)}>{SCENARIOS.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
       <label className="toolbar-field">Selection<select aria-label="Selected node" value={selected} onChange={e=>select(e.target.value)}>{state.nodes.map(n=><option key={n.id}>{n.id}</option>)}</select></label>
       <button aria-expanded={showControls} onClick={()=>setShowControls(!showControls)}>Adjust conditions</button>
       <button onClick={()=>{setReasoningEpoch(v=>v+1);setState(createWeather(designs));select('W01');}}>Reset fleet</button>
     </SimulationToolbar>
     <main>
-      <div className="w-heading"><div><div className="w-eyebrow">OCEAN RESILIENCE / FAILURE REHEARSAL</div><h1>{reasoning ? 'Muse Reasoning' : 'Weather Simulator'}<span>.</span></h1><p>{reasoning ? 'An expert coordinator on each master. Observe, reason, validate, act.' : 'Push the conditions. Break the formation. Work out what comes next.'}</p></div><button onClick={() => setShowPlan(!showPlan)} aria-expanded={showPlan}>Recovery & design rationale ↗</button></div>
+      <div className="w-heading"><div><div className="w-eyebrow">OCEAN RESILIENCE / FAILURE REHEARSAL</div><h1>{reasoning ? 'Muse Reasoning' : 'Weather Simulator'}<span>.</span></h1><p>{reasoning ? 'Observe, reason, validate, act. Debug playback stays at 1× so replies can arrive before strategies expire.' : 'Push the conditions. Break the formation. Work out what comes next.'}</p></div><button onClick={() => setShowPlan(!showPlan)} aria-expanded={showPlan}>Recovery & design rationale ↗</button></div>
       {reasoning && <ReasoningPanel selectedNode={selected} onInject={inject} epoch={reasoningEpoch} state={state} conditions={conditions} scenario={scenario} designs={designs} onClear={()=>setState(s=>({...s,reasoningPolicy:undefined}))} onApply={(decision:Decision,input:Observation)=>{
         const current=observe(state,conditions,scenario,designs,useStore.getState().config);
         const rejected=validateDecision(decision,current);
